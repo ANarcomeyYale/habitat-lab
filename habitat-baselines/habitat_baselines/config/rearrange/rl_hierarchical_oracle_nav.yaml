@@ -7,7 +7,7 @@
 # - Use the oracle navigation skill.
 
 defaults:
-  - rl_hierarchical
+  - rl_hierarchical_planner
   - /habitat/task/actions:
     - oracle_nav_action
   - _self_
