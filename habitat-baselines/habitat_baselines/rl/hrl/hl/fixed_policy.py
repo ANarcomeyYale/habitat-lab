@@ -207,6 +207,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
 
 
                 self.save_pddl_problem_fn(
+                    bound_pddl_probs[batch_idx],
                     problem_filename=f"pddl_workingdir/habitat_problem_{batch_idx}.pddl", 
                     current_state=bound_pddl_probs[batch_idx]._sim_info)
                 

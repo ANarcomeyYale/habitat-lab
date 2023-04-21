@@ -15,6 +15,7 @@ from habitat.tasks.rearrange.multi_task.composite_sensors import (
     CompositeSuccess,
 )
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import write_pddl_domain, save_pddl_problem
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
@@ -38,11 +39,6 @@ from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
 from collections import defaultdict
-from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
-    LogicalExpr,
-    LogicalExprType,
-    LogicalQuantifierType,
-)
 
 import time
 import subprocess
@@ -88,237 +84,22 @@ class HierarchicalPolicy(nn.Module, Policy):
             task_spec_file,
             config,
         )
-       
-        domain_starttime = time.time()
-
-        types_set = {entity.expr_type for name, entity in self._pddl_problem.all_entities.items()}
-        types_pddl = defaultdict(list)
-        while len(types_set) > 0:
-            type = types_set.pop()
-            if type.parent is not None:
-                types_pddl[type.parent.name].append(type.name)
-                types_set.add(type.parent)
-
-        def predicate_to_dict(pred, use_arg_values=False):
-            if isinstance(pred, LogicalExpr):
-                if pred._expr_type == LogicalExprType.AND:
-                    return {'expr_type': 'and', 'sub_exprs': [predicate_to_dict(pred, use_arg_values) for pred in pred._sub_exprs]}
-                elif pred._expr_type == LogicalExprType.NAND:
-                    return {'expr_type': 'not', 'sub_exprs': 
-                            [{'expr_type': 'and', 'sub_exprs': [predicate_to_dict(pred, use_arg_values) for pred in pred._sub_exprs]}]}
-                elif pred._expr_type == LogicalExprType.NOT:
-                    return {'expr_type': 'not', 'sub_exprs': [predicate_to_dict(pred, use_arg_values) for pred in pred._sub_exprs]}
-                else:
-                    raise ValueError
-            else:
-                args = pred._arg_values if use_arg_values else pred._args 
-                return {'name': pred.name, 'params': {
-                    arg.name:arg.expr_type.name for arg in args}
-                }
-                # TODO: should params be a list of tuples to maintain guaranteed order?
-        
-        predicates_pddl = []
-        for name, pred in self._pddl_problem.predicates.items():
-            #predicates_pddl.append({'name': pred.name, 'params': [
-            #    {'name': } for param in pred._args
-            #]})
-            #predicates_pddl.append({'name': pred.name, 'params': {
-            #    arg.name:arg.expr_type.name for arg in pred._args}
-            #})
-            predicates_pddl.append(predicate_to_dict(pred))
-
-        
-        def condition_to_dict(cond):
-            if isinstance(cond, list):
-                return [predicate_to_dict(pred, use_arg_values=True) for pred in cond]
-            elif isinstance(cond, LogicalExpr):
-                if cond._expr_type == LogicalExprType.AND:
-                    return [predicate_to_dict(pred, use_arg_values=True) for pred in cond._sub_exprs]
-                elif cond._expr_type == LogicalExprType.NOT:
-                    # TODO: this branch of code has not been tested
-                    #return {'expr_type': 'not', 'sub_exprs'}
-                    #import pdb; pdb.set_trace()
-                    return predicate_to_dict(cond, use_arg_values=True)
-
-        def action_to_dict(action):
-            return {
-                    'name': action.name,
-                    'params': {arg.name:arg.expr_type.name for arg in action._params},
-                    'pre_condition': condition_to_dict(action._pre_cond),
-                    'post_condition': condition_to_dict(action._post_cond)
-                }
-
-        actions_pddl = []
-        for name, action in self._pddl_problem.actions.items():
-            actions_pddl.append(action_to_dict(action))
-
-        constants_pddl = {name: const.expr_type.name for name, const in self._pddl_problem._constants.items()}
-
-        domain_pddl = {
-            'domain_name': 'habitat',
-            'requirements': ['typing', 'strips', 'constraints', 'preferences', 'universal-preconditions', 'negative-preconditions'],
-            'types': types_pddl,
-            'constants': constants_pddl,
-            'predicates': predicates_pddl,
-            'actions': actions_pddl
-        }
-
-        def format_reqs(requirements):
-            return ':' + ' :'.join(requirements)
-
-        def format_types(types):
-            return ' '.join([
-                f"{' '.join(children_types)} - {parent_type}"
-                for parent_type, children_types in types.items()
-            ])
-
-        def format_constants(consts):
-            return ' '.join([
-                f"{name} - {type}" for name, type in consts.items()
-            ])
-
-        def format_parameters(params, include_types=True):
-            if include_types:
-                return ' '.join([f"?{arg_name} - {arg_type}" for arg_name, arg_type in params.items()])
-            else:
-                return ' '.join([f"{arg_name}" if arg_name in self._pddl_problem._constants else f"?{arg_name}" for arg_name in params.keys()])
-
-        def format_predicate(pred, include_types=True):
-            #args_str = ' '.join([f"?{arg_name} - {arg_type}" for arg_name, arg_type in pred["params"].items()])
-            args_str = format_parameters(pred["params"], include_types=include_types)
-            return f"({pred['name']} {args_str})"
-
-        def format_condition(cond):
-            if 'expr_type' in cond:
-                return f"({cond['expr_type']} {' '.join([format_condition(sub_expr) for sub_expr in cond['sub_exprs']])})"
-            else:
-                return format_predicate(cond, include_types=False)
-        
-        def format_conditions(pre_condition):
-            return ' '.join([format_condition(cond) for cond in pre_condition])
-
-        with open("pddl_workingdir/habitat_domain.pddl", mode="w") as file:
-            file.write(f"(define (domain {domain_pddl['domain_name']})\n")
             
-            file.write(f"\t(:requirements {format_reqs(domain_pddl['requirements'])})\n")
-
-            file.write(f"\t(:types {format_types(domain_pddl['types'])})\n")
-
-            file.write(f"\t(:constants {format_constants(domain_pddl['constants'])})\n")
-
-            file.write(f"\t(:predicates\n")
-            for predicate in domain_pddl["predicates"]:
-                file.write(f"\t\t{format_predicate(predicate)}\n")
-            file.write("\t)\n")
-
-            for action in domain_pddl["actions"]:
-                file.write(f"\t(:action {action['name']}\n")
-                file.write(f"\t\t:parameters ({format_parameters(action['params'])})\n")
-                file.write(f"\t\t:precondition (and {format_conditions(action['pre_condition'])})\n")
-                file.write(f"\t\t:effect (and {format_conditions(action['post_condition'])})\n")
-                file.write("\t)\n")
-
-            file.write(")")
-        command = 'docker cp pddl_workingdir/habitat_domain.pddl pddl_manual_dev:/root/workingdir'
+        domain_starttime = time.time()
+        domain_filename="pddl_workingdir/habitat_domain.pddl"
+        write_pddl_domain(self._pddl_problem, domain_filename)
+        command = f'docker cp {domain_filename} pddl_manual_dev:/root/workingdir'
         subprocess.call(command, shell=True)
         domain_endtime = time.time()
 
         print(f"\n\n@@@ Domain processing time = {round(domain_endtime-domain_starttime,3)} @@@\n\n")
         # @@@ Domain processing time = 0.061 @@@
         # in non debug mode: @@@ Domain processing time = 0.054 @@@
-
-        def save_pddl_problem(problem_filename="pddl_workingdir/habitat_problem.pddl", current_state=None):
-
-            objects = [{"name": obj.name, "type": obj.expr_type.name} for obj in self._pddl_problem._objects.values()]
-            objects_pddl = defaultdict(list)
-            for obj in objects:
-                objects_pddl[obj["type"]].append(obj)
-            
-            if current_state is None:
-                init_pddl = condition_to_dict(self._pddl_problem.init)
-            else:
-                # TODO: precompute this only once
-                type_to_entities = defaultdict(set)
-                for name, entity in self._pddl_problem._constants.items():
-                    type = entity.expr_type
-                    while type is not None:
-                        type_to_entities[type.name].add(entity)
-                        type = type.parent
-
-                for name, entity in self._pddl_problem._objects.items():
-                    type = entity.expr_type
-                    while type is not None:
-                        type_to_entities[type.name].add(entity)
-                        type = type.parent
-
-                init_preds = []
-                init_preds_all = []
-                for pred in current_state.predicates.values():
-                    all_arg_values = [type_to_entities[arg.expr_type.name] for arg in pred._args]
-                    arg_combinations = itertools.product(*all_arg_values)
-                    for args in arg_combinations:
-                        this_pred = pred.clone()
-                        this_pred.set_param_values(args)
-                        if this_pred.is_true(current_state):
-                            init_preds.append(this_pred)
-                        init_preds_all.append(this_pred)
-
-                # TODO: in non-debug mode, get around sim pickle issue by extracting these true predicates instead of entire PddlProblem object 
-
-                init_pddl = condition_to_dict(self._pddl_problem.init) + condition_to_dict(init_preds)
-
-            goal_pddl = condition_to_dict(self._pddl_problem.goal)
-
-            problem_pddl = {
-                            "problem_name": "habitat_problem",
-                            "domain_name": "habitat",
-                            "objects": objects_pddl,
-                            "init": init_pddl,
-                            "goal": goal_pddl
-                            }
-            
-            def format_objects(objs):
-                return ' '.join([
-                    f"{' '.join([type_obj['name'] for type_obj in type_objs])} - {type}"
-                    for type, type_objs in objs.items()
-                ])
-
-            with open(problem_filename, mode='w') as file:
-
-                file.write(f"(define (problem {problem_pddl['problem_name']})\n")
-
-                file.write(f"\t(:domain {problem_pddl['domain_name']})\n")
-
-                file.write(f"\t(:objects {format_objects(problem_pddl['objects']).replace('|','-')})\n")
-
-                # file.write(f"\t(:init\n")
-                # for predicate in problem_pddl["init"]:
-                #     file.write(f"\t\t{format_predicate(predicate, include_types=False).replace('?','')}\n")
-                # file.write("\t)\n")
-                # # TODO: less hacky removal of question marks for pddl problem
-
-                # file.write(f"\t(:goal\n")
-                # for predicate in problem_pddl["goal"]:
-                #     file.write(f"\t\t{format_predicate(predicate, include_types=False).replace('?','')}\n")
-                # file.write("\t)\n")
-
-                # TODO: better checking for empty init/goal than checking empty string
-                # TODO: less hacky removal of question marks  from init and goal strings
-                init_str = format_conditions(problem_pddl['init']).replace('?','')
-                if init_str == '':
-                    file.write(f"\t(:init )\n")
-                else:
-                    file.write(f"\t(:init {format_conditions(problem_pddl['init']).replace('?','').replace('|','-')})\n")
-                goal_str = format_conditions(problem_pddl['goal']).replace('?','')
-                if goal_str == '':
-                    file.write(f"\t(:goal )\n")
-                else:
-                    file.write(f"\t(:goal (and {format_conditions(problem_pddl['goal']).replace('?','').replace('|','-')}))\n")
-
-                file.write(")")
+        
+        
 
         problem_starttime = time.time()
-        save_pddl_problem()
+        save_pddl_problem(self._pddl_problem)
         command = 'docker cp pddl_workingdir/habitat_problem.pddl pddl_manual_dev:/root/workingdir'
         subprocess.call(command, shell=True)
         problem_endtime = time.time()
