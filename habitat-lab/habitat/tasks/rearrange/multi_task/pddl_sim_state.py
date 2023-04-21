@@ -200,6 +200,9 @@ class PddlSimState:
         """
         Returns if `entity` is inside of `target` in the CURRENT simulator state, NOT at the start of the episode.
         """
+        if entity.name == "START" or target.name == "START":
+            return False
+        
         entity_pos = sim_info.get_entity_pos(entity)
         check_marker = cast(
             MarkerInfo, sim_info.search_for_entity(target, ART_OBJ_TYPE)
@@ -211,6 +214,7 @@ class PddlSimState:
             global_bb = habitat_sim.geo.get_transformed_bb(
                 bb, check_marker.link_node.transformation
             )
+        # TODO: update to include start position as a target
 
         return global_bb.contains(entity_pos)
 
@@ -261,6 +265,8 @@ class PddlSimState:
                 if not self._is_object_inside(entity, target, sim_info):
                     return False
             elif sim_info.check_type_matches(target, OBJ_TYPE):
+                #if entity.name == "START":
+                #    cur_pos = self.episode.start_position
                 obj_idx = cast(
                     int, sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
                 )
@@ -278,14 +284,17 @@ class PddlSimState:
                     abs_obj_id
                 ).transformation.translation
 
-                targ_idx = cast(
-                    int, sim_info.search_for_entity(target, GOAL_TYPE)
-                )
-                # TODO: will a target of type rigid_obj_type or obj_type or static_obj_type fail here despite passing
-                    # the <at> predicate requirement of static_obj_type and evaluating here?
-                    # answer: rigid_obj_type fails, but cab or fridge types within static_obj_type are fine
-                idxs, pos_targs = sim_info.sim.get_targets()
-                targ_pos = pos_targs[list(idxs).index(targ_idx)]
+                if target.name == "START":
+                    targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
+                else:
+                    targ_idx = cast(
+                        int, sim_info.search_for_entity(target, OBJ_TYPE)
+                    )
+                    # TODO: will a target of type rigid_obj_type or obj_type or static_obj_type fail here despite passing
+                        # the <at> predicate requirement of static_obj_type and evaluating here?
+                        # answer: rigid_obj_type fails, but cab or fridge types within static_obj_type are fine
+                    idxs, pos_targs = sim_info.sim.get_targets()
+                    targ_pos = pos_targs[list(idxs).index(targ_idx)]
 
                 dist = np.linalg.norm(cur_pos - targ_pos)
                 if dist >= sim_info.obj_thresh:
@@ -322,9 +331,12 @@ class PddlSimState:
             )
             abs_obj_id = sim.scene_obj_ids[obj_idx]
 
-            targ_idx = cast(int, sim_info.search_for_entity(target, GOAL_TYPE))
-            all_targ_idxs, pos_targs = sim.get_targets()
-            targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
+            if target.name == "START":
+                targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
+            else:
+                targ_idx = cast(int, sim_info.search_for_entity(target, GOAL_TYPE))
+                all_targ_idxs, pos_targs = sim.get_targets()
+                targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
             set_T = mn.Matrix4.translation(targ_pos)
 
             # Get the object id corresponding to this name

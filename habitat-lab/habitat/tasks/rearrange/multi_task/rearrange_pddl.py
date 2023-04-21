@@ -127,13 +127,14 @@ RIGID_OBJ_TYPE = "rigid_obj_type"
 class PddlSimInfo:
     obj_ids: Dict[str, int]
     target_ids: Dict[str, int]
+    #episode_locs: Dict[str, int]
     art_handles: Dict[str, int]
     marker_handles: Dict[str, MarkerInfo]
     robot_ids: Dict[str, int]
 
-    sim: RearrangeSim
+    sim: RearrangeSim #can't pickle
     dataset: RearrangeDatasetV0
-    env: RearrangeTask
+    env: RearrangeTask # can't pickle due to SceneNode
     episode: Episode
     obj_thresh: float
     art_thresh: float
@@ -157,10 +158,14 @@ class PddlSimInfo:
             marker_info = self.marker_handles[ename]
             return marker_info.get_current_position()
         elif self.check_type_matches(entity, GOAL_TYPE):
-            idx = self.target_ids[ename]
-            targ_idxs, pos_targs = self.sim.get_targets()
-            rel_idx = targ_idxs.tolist().index(idx)
-            return pos_targs[rel_idx]
+            if ename in self.target_ids:
+                idx = self.target_ids[ename]
+                targ_idxs, pos_targs = self.sim.get_targets()
+                rel_idx = targ_idxs.tolist().index(idx)
+                return pos_targs[rel_idx]
+            elif ename == "START":
+                pos = self.episode.start_position
+                return np.array(pos)
         elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
             rom = self.sim.get_rigid_object_manager()
             idx = self.obj_ids[ename]
@@ -180,6 +185,9 @@ class PddlSimInfo:
         elif self.check_type_matches(entity, ART_OBJ_TYPE):
             return self.marker_handles[ename]
         elif self.check_type_matches(entity, GOAL_TYPE):
+            if ename == "START":
+                return ename
+            else:
                 return self.target_ids[ename]
         elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
             return self.obj_ids[ename]
@@ -201,7 +209,10 @@ class PddlSimInfo:
         elif expected_type == ART_OBJ_TYPE:
             return self.marker_handles[ename]
         elif expected_type == GOAL_TYPE:
-            return self.target_ids[ename]
+            if ename == "START":
+                return ename
+            else:
+                return self.target_ids[ename]
         elif expected_type == RIGID_OBJ_TYPE:
             return self.obj_ids[ename]
         elif expected_type == OBJ_TYPE:

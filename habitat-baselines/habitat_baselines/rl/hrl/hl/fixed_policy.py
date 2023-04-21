@@ -104,6 +104,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
             plan_step = plan_step.replace('-','|')
             # TODO: better hack than replacing | with - to satisfy pddl character restrictions
             plan_step = plan_step.replace('target_goal', 'TARGET_goal')
+            plan_step = plan_step.replace('start', 'START')
             # TODO: better hack than capitalizing target goal. Optic planner forces lowercase.
                 # Ideally, actually compare argument entities with list of known entities and convert if there's
                 # a match for all but - to | or capitalization

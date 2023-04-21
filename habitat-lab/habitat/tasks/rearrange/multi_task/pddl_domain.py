@@ -316,6 +316,7 @@ class PddlDomain:
                 f"TARGET_{id_to_name[idx]}": idx
                 for idx in sim.get_targets()[0]
             },
+            #episode_locs={"START": len(sim.get_targets()[0])}
             art_handles={k.handle: i for i, k in enumerate(sim.art_objs)},
             marker_handles=sim.get_all_markers(),
             robot_ids={
