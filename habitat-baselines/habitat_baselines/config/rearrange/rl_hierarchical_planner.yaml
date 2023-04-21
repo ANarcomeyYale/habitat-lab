@@ -10,7 +10,7 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy: hl_fixed
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: nn_skills
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills
   - _self_
 
 habitat_baselines:
@@ -19,9 +19,10 @@ habitat_baselines:
   updater_name: "HRLPPO"
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
+  tensorboard_dir: "tb/rl_hl_planner"
   video_fps: 30
   eval_ckpt_path_dir: ""
-  num_environments: 4
+  num_environments: 1
   writer_type: 'tb'
   num_updates: -1
   total_num_steps: 5.0e7
@@ -35,14 +36,14 @@ habitat_baselines:
   eval:
     use_ckpt_config: False
     should_load_ckpt: False
-    video_option: ["disk"]
+    video_option: ["disk", "tensorboard"]
 
   rl:
     ppo:
       # ppo params
       clip_param: 0.2
       ppo_epoch: 2
-      num_mini_batch: 2
+      num_mini_batch: 1
       value_loss_coef: 0.5
       entropy_coef: 0.0001
       lr: 2.5e-4
