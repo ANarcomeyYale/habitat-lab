@@ -19,6 +19,7 @@ class LogicalExprType(Enum):
     OR = "or"
     NOR = "nor"
 
+    NOT = "not"
 
 class LogicalQuantifierType(Enum):
     FORALL = "forall"

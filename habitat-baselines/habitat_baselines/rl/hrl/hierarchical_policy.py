@@ -213,6 +213,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             elif isinstance(cond, LogicalExpr):
                 if cond._expr_type == LogicalExprType.AND:
                     return [predicate_to_dict(pred, use_arg_values=True) for pred in cond._sub_exprs]
+                elif cond._expr_type == LogicalExprType.NOT:
+                    # TODO: this branch of code has not been tested
+                    #return {'expr_type': 'not', 'sub_exprs'}
+                    #import pdb; pdb.set_trace()
+                    return predicate_to_dict(cond, use_arg_values=True)
 
         def action_to_dict(action):
             return {

@@ -93,8 +93,9 @@ class PddlDomain:
             pre_cond = self._parse_only_logical_expr(
                 action_d["precondition"], name_to_param
             )
+            # Now allows not logical expressions in post conditions
             post_cond = [
-                self.parse_predicate(p, name_to_param)
+                self._parse_logical_expr_or_predicate(p, name_to_param)
                 for p in action_d["postcondition"]
             ]
             task_info_d = action_d["task_info"]
@@ -116,6 +117,15 @@ class PddlDomain:
             )
             self.actions[action.name] = action
 
+    def _parse_logical_expr_or_predicate(self, to_parse: Union[str, dict], existing_entities: Dict[str, PddlEntity]
+    ) -> LogicalExpr:
+        if isinstance(to_parse, str):
+            return self.parse_predicate(to_parse, existing_entities)
+        elif isinstance(to_parse,  dict):
+            return self._parse_only_logical_expr(to_parse, existing_entities)
+        else:
+            raise ValueError()
+    
     def _parse_predicates(self, domain_def) -> None:
         """
         Fetches the PDDL predicates into `self.predicates`.
