@@ -953,6 +953,9 @@ class PPOTrainer(BaseRLTrainer):
         observations, bound_pddl_probs = zip(*self.envs.reset())
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
+        # TODO: Non-debugging mode crashes, due to reset() returning PddlProblem objects
+        #   export HABITAT_ENV_DEBUG=0
+        #   TypeError: can't pickle habitat_sim._ext.habitat_sim_bindings.SceneNode objects
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device="cpu"

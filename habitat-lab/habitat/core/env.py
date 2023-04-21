@@ -416,6 +416,8 @@ class RLEnv(gym.Env):
                 episode_id=self._env.current_episode.episode_id,
                 scene_id=self._env.current_episode.scene_id,
             )
+        # TODO? here, return the true predicates with each call, so that the high level policy
+        # gets up to date info without breaking pickling of reset() return values
 
     @profiling_wrapper.RangeContext("RLEnv.reset")
     def reset(
