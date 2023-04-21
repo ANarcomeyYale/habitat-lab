@@ -54,6 +54,8 @@ class ExprType:
 
         return other_type.name in all_types
 
+    # TODO: add __eq__ operator?
+    
     def __repr__(self):
         return f"T:{self.name}"
 
@@ -167,6 +169,7 @@ class PddlSimInfo:
                 abs_obj_id
             ).transformation.translation
             return cur_pos
+        # entity obj-T:obj_type with name 'obj' fails this elif cascade
         else:
             raise ValueError()
 
@@ -177,7 +180,7 @@ class PddlSimInfo:
         elif self.check_type_matches(entity, ART_OBJ_TYPE):
             return self.marker_handles[ename]
         elif self.check_type_matches(entity, GOAL_TYPE):
-            return self.target_ids[ename]
+                return self.target_ids[ename]
         elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
             return self.obj_ids[ename]
         else:
@@ -201,5 +204,14 @@ class PddlSimInfo:
             return self.target_ids[ename]
         elif expected_type == RIGID_OBJ_TYPE:
             return self.obj_ids[ename]
+        elif expected_type == OBJ_TYPE:
+            if ename in self.obj_ids and ename in self.target_ids:
+                raise ValueError("Entity is both an object and a target")
+            elif ename in self.obj_ids:
+                return self.obj_ids[ename]
+            elif ename in self.target_ids:
+                return self.target_ids[ename]
+            else:
+                raise ValueError("Entity is neither an object nor a target")
         else:
             raise ValueError()

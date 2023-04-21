@@ -37,6 +37,16 @@ from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
+from collections import defaultdict
+from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
+    LogicalExpr,
+    LogicalExprType,
+    LogicalQuantifierType,
+)
+
+import time
+import subprocess
+import itertools
 
 @baseline_registry.register_policy
 class HierarchicalPolicy(nn.Module, Policy):
@@ -79,6 +89,346 @@ class HierarchicalPolicy(nn.Module, Policy):
             config,
         )
 
+
+        '''
+        Example usage of AI-planning/pddl parser:
+
+        from pddl.logic import Predicate, constants, variables
+        from pddl.core import Domain, Problem, Action, Requirements
+        from pddl.formatter import domain_to_string, problem_to_string
+
+        # set up variables and constants
+        x, y, z = variables("x y z", types=["type_1"])
+        a, b, c = constants("a b c", types=["type_1"])
+
+        # define predicates
+        p1 = Predicate("p1", x, y, z)
+        p2 = Predicate("p2", x, y)
+
+        # define actions
+        a1 = Action(
+            "action-1",
+            parameters=[x, y, z],
+            precondition=p1(x, y, z) & ~p2(y, z),
+            effect=p2(y, z)
+        )
+
+        # define the domain object.
+        requirements = [Requirements.STRIPS, Requirements.TYPING]
+        domain = Domain("my_domain",
+            requirements=requirements,
+            types=["type_1"],
+            constants=[a, b, c],
+            predicates=[p1, p2],
+            actions=[a1])
+
+        print(domain_to_string(domain))
+        '''
+
+
+        '''
+        Example PddlDomain/Problem object attributes:
+
+        pddl_problem.expr_types
+        {'object': T:object, 'articulated_agent_type': T:articulated_agent_type, 'static_obj_type': T:static_obj_type, 'art_obj_type': T:art_obj_type, 'obj_type': T:obj_type, 'cab_type': T:cab_type, 'fridge_type': T:fridge_type, 'goal_type': T:goal_type, 'rigid_obj_type': T:rigid_obj_type}
+        
+        pddl_problem.constants
+        {'cab_push_point_7': cab_push_point_7-T:cab_type, 'cab_push_point_6': cab_push_point_6-T:cab_type, 'cab_push_point_5': cab_push_point_5-T:cab_type, 'cab_push_point_4': cab_push_point_4-T:cab_type, 'fridge_push_point': fridge_push_point-T:fridge_type}
+        
+        pddl_problem.all_entities
+        {'goal0|0': goal0|0-T:rigid_obj_type, 'TARGET_goal0|0': TARGET_goal0|0-T:goal_type, 'robot_0': robot_0-T:articulated_agent_type, 'cab_push_point_7': cab_push_point_7-T:cab_type, 'cab_push_point_6': cab_push_point_6-T:cab_type, 'cab_push_point_5': cab_push_point_5-T:cab_type, 'cab_push_point_4': cab_push_point_4-T:cab_type, 'fridge_push_point': fridge_push_point-T:fridge_type}
+        
+        pddl_problem.predicates
+        {'in': <Predicate: in [[obj-T:obj_type, receptacle-T:art_obj_type]] [None]>, 'holding': <Predicate: holding [[obj-T:rigid_obj_type, robot_id-T:articulated_agent_type]] [None]>, 'not_holding': <Predicate: not_holding [[robot_id-T:articulated_agent_type]] [None]>, 'opened_cab': <Predicate: opened_cab [[cab_id-T:cab_type]] [None]>, 'closed_cab': <Predicate: closed_cab [[cab_id-T:cab_type]] [None]>, 'opened_fridge': <Predicate: opened_fridge [[fridge_id-T:fridge_type]] [None]>, 'closed_fridge': <Predicate: closed_fridge [[fridge_id-T:fridge_type]] [None]>, 'robot_at': <Predicate: robot_at [[Y-T:static_obj_type, robot_id-T:articulated_agent_type]] [None]>, 'at': <Predicate: at [[obj-T:obj_type, at_entity-T:static_obj_type]] [None]>}
+        
+        pddl_problem.actions
+        {'nav': <Action nav ([obj-T:obj_type, robot-T:articulated_agent_type])->(None)>, 'nav_to_receptacle': <Action nav_to_receptacle ([marker-T:art_obj_type, obj-T:obj_type, robot-T:articulated_agent_type])->(None)>, 'pick': <Action pick ([obj-T:rigid_obj_type, robot-T:articulated_agent_type])->(None)>, 'place': <Action place ([place_obj-T:rigid_obj_type, obj-T:goal_type, robot-T:articulated_agent_type])->(None)>, 'open_fridge': <Action open_fridge ([fridge_id-T:fridge_type, obj-T:obj_type, robot-T:articulated_agent_type])->(None)>, 'close_fridge': <Action close_fridge ([fridge_id-T:fridge_type, obj-T:obj_type, robot-T:articulated_agent_type])->(None)>, 'open_cab': <Action open_cab ([marker-T:cab_type, obj-T:obj_type, robot-T:articulated_agent_type])->(None)>, 'close_cab': <Action close_cab ([marker-T:cab_type, obj-T:obj_type, robot-T:articulated_agent_type])->(None)>, 'nav_to_receptacle_by_name': <Action nav_to_receptacle_by_name ([marker-T:art_obj_type, robot-T:articulated_agent_type])->(None)>, 'open_fridge_by_name': <Action open_fridge_by_name ([fridge_id-T:fridge_type, robot-T:articulated_agent_type])->(None)>, 'close_fridge_by_name': <Action close_fridge_by_name ([fridge_id-T:fridge_type, robot-T:articulated_agent_type])->(None)>, 'open_cab_by_name': <Action open_cab_by_name ([marker-T:cab_type, robot-T:articulated_agent_type])->(None)>, 'close_cab_by_name': <Action close_cab_by_name ([marker-T:cab_type, robot-T:articulated_agent_type])->(None)>}
+        
+        note: all_entities includes only goal and target objects, not the entire set of objects that could be the goal/target
+        '''
+
+
+        '''
+        Example plan for groceries task:
+
+        - nav(obj0_target|0, robot_0)
+        - pick(obj0_target|0, robot_0)
+        - nav(TARGET_obj0_target|0, robot_0)
+        - place(obj0_target|0,TARGET_obj0_target|0, robot_0)
+
+        - nav(obj1_target|1, robot_0)
+        - pick(obj1_target|1, robot_0)
+        - nav(TARGET_obj1_target|1, robot_0)
+        - place(obj1_target|1,TARGET_obj1_target|1, robot_0)
+
+        - nav(obj2_target|2, robot_0)
+        - pick(obj2_target|2, robot_0)
+        - nav(TARGET_obj2_target|2, robot_0)
+        - place(obj2_target|2,TARGET_obj2_target|2, robot_0)
+        '''
+
+       
+        domain_starttime = time.time()
+
+        types_set = {entity.expr_type for name, entity in self._pddl_problem.all_entities.items()}
+        types_pddl = defaultdict(list)
+        while len(types_set) > 0:
+            type = types_set.pop()
+            if type.parent is not None:
+                types_pddl[type.parent.name].append(type.name)
+                types_set.add(type.parent)
+
+        def predicate_to_dict(pred, use_arg_values=False):
+            if isinstance(pred, LogicalExpr):
+                if pred._expr_type == LogicalExprType.AND:
+                    return {'expr_type': 'and', 'sub_exprs': [predicate_to_dict(pred, use_arg_values) for pred in pred._sub_exprs]}
+                elif pred._expr_type == LogicalExprType.NAND:
+                    return {'expr_type': 'not', 'sub_exprs': 
+                            [{'expr_type': 'and', 'sub_exprs': [predicate_to_dict(pred, use_arg_values) for pred in pred._sub_exprs]}]}
+                elif pred._expr_type == LogicalExprType.NOT:
+                    return {'expr_type': 'not', 'sub_exprs': [predicate_to_dict(pred, use_arg_values) for pred in pred._sub_exprs]}
+                else:
+                    raise ValueError
+            else:
+                args = pred._arg_values if use_arg_values else pred._args 
+                return {'name': pred.name, 'params': {
+                    arg.name:arg.expr_type.name for arg in args}
+                }
+                # TODO: should params be a list of tuples to maintain guaranteed order?
+        
+        predicates_pddl = []
+        for name, pred in self._pddl_problem.predicates.items():
+            #predicates_pddl.append({'name': pred.name, 'params': [
+            #    {'name': } for param in pred._args
+            #]})
+            #predicates_pddl.append({'name': pred.name, 'params': {
+            #    arg.name:arg.expr_type.name for arg in pred._args}
+            #})
+            predicates_pddl.append(predicate_to_dict(pred))
+
+        
+        def condition_to_dict(cond):
+            if isinstance(cond, list):
+                return [predicate_to_dict(pred, use_arg_values=True) for pred in cond]
+            elif isinstance(cond, LogicalExpr):
+                if cond._expr_type == LogicalExprType.AND:
+                    return [predicate_to_dict(pred, use_arg_values=True) for pred in cond._sub_exprs]
+
+        def action_to_dict(action):
+            return {
+                    'name': action.name,
+                    'params': {arg.name:arg.expr_type.name for arg in action._params},
+                    'pre_condition': condition_to_dict(action._pre_cond),
+                    'post_condition': condition_to_dict(action._post_cond)
+                }
+
+        actions_pddl = []
+        for name, action in self._pddl_problem.actions.items():
+            actions_pddl.append(action_to_dict(action))
+
+        constants_pddl = {name: const.expr_type.name for name, const in self._pddl_problem._constants.items()}
+
+        domain_pddl = {
+            'domain_name': 'habitat',
+            'requirements': ['typing', 'strips', 'constraints', 'preferences', 'universal-preconditions', 'negative-preconditions'],
+            'types': types_pddl,
+            'constants': constants_pddl,
+            'predicates': predicates_pddl,
+            'actions': actions_pddl
+        }
+
+        def format_reqs(requirements):
+            return ':' + ' :'.join(requirements)
+
+        def format_types(types):
+            return ' '.join([
+                f"{' '.join(children_types)} - {parent_type}"
+                for parent_type, children_types in types.items()
+            ])
+
+        def format_constants(consts):
+            return ' '.join([
+                f"{name} - {type}" for name, type in consts.items()
+            ])
+
+        def format_parameters(params, include_types=True):
+            if include_types:
+                return ' '.join([f"?{arg_name} - {arg_type}" for arg_name, arg_type in params.items()])
+            else:
+                return ' '.join([f"{arg_name}" if arg_name in self._pddl_problem._constants else f"?{arg_name}" for arg_name in params.keys()])
+
+        def format_predicate(pred, include_types=True):
+            #args_str = ' '.join([f"?{arg_name} - {arg_type}" for arg_name, arg_type in pred["params"].items()])
+            args_str = format_parameters(pred["params"], include_types=include_types)
+            return f"({pred['name']} {args_str})"
+
+        def format_condition(cond):
+            if 'expr_type' in cond:
+                return f"({cond['expr_type']} {' '.join([format_condition(sub_expr) for sub_expr in cond['sub_exprs']])})"
+            else:
+                return format_predicate(cond, include_types=False)
+        
+        def format_conditions(pre_condition):
+            return ' '.join([format_condition(cond) for cond in pre_condition])
+
+        with open("pddl_workingdir/habitat_domain.pddl", mode="w") as file:
+            file.write(f"(define (domain {domain_pddl['domain_name']})\n")
+            
+            file.write(f"\t(:requirements {format_reqs(domain_pddl['requirements'])})\n")
+
+            file.write(f"\t(:types {format_types(domain_pddl['types'])})\n")
+
+            file.write(f"\t(:constants {format_constants(domain_pddl['constants'])})\n")
+
+            file.write(f"\t(:predicates\n")
+            for predicate in domain_pddl["predicates"]:
+                file.write(f"\t\t{format_predicate(predicate)}\n")
+            file.write("\t)\n")
+
+            for action in domain_pddl["actions"]:
+                file.write(f"\t(:action {action['name']}\n")
+                file.write(f"\t\t:parameters ({format_parameters(action['params'])})\n")
+                file.write(f"\t\t:precondition (and {format_conditions(action['pre_condition'])})\n")
+                file.write(f"\t\t:effect (and {format_conditions(action['post_condition'])})\n")
+                file.write("\t)\n")
+
+            file.write(")")
+        command = 'docker cp pddl_workingdir/habitat_domain.pddl pddl_manual_dev:/root/workingdir'
+        subprocess.call(command, shell=True)
+        domain_endtime = time.time()
+
+        print(f"\n\n@@@ Domain processing time = {round(domain_endtime-domain_starttime,3)} @@@\n\n")
+        # @@@ Domain processing time = 0.061 @@@
+        # in non debug mode: @@@ Domain processing time = 0.054 @@@
+
+        def save_pddl_problem(problem_filename="pddl_workingdir/habitat_problem.pddl", current_state=None):
+
+            objects = [{"name": obj.name, "type": obj.expr_type.name} for obj in self._pddl_problem._objects.values()]
+            objects_pddl = defaultdict(list)
+            for obj in objects:
+                objects_pddl[obj["type"]].append(obj)
+            
+            if current_state is None:
+                init_pddl = condition_to_dict(self._pddl_problem.init)
+            else:
+                # TODO
+                init_pddl = None
+
+            goal_pddl = condition_to_dict(self._pddl_problem.goal)
+
+            problem_pddl = {
+                            "problem_name": "habitat_problem",
+                            "domain_name": "habitat",
+                            "objects": objects_pddl,
+                            "init": init_pddl,
+                            "goal": goal_pddl
+                            }
+            
+            def format_objects(objs):
+                return ' '.join([
+                    f"{' '.join([type_obj['name'] for type_obj in type_objs])} - {type}"
+                    for type, type_objs in objs.items()
+                ])
+
+            with open(problem_filename, mode='w') as file:
+
+                file.write(f"(define (problem {problem_pddl['problem_name']})\n")
+
+                file.write(f"\t(:domain {problem_pddl['domain_name']})\n")
+
+                file.write(f"\t(:objects {format_objects(problem_pddl['objects']).replace('|','-')})\n")
+
+                # file.write(f"\t(:init\n")
+                # for predicate in problem_pddl["init"]:
+                #     file.write(f"\t\t{format_predicate(predicate, include_types=False).replace('?','')}\n")
+                # file.write("\t)\n")
+                # # TODO: less hacky removal of question marks for pddl problem
+
+                # file.write(f"\t(:goal\n")
+                # for predicate in problem_pddl["goal"]:
+                #     file.write(f"\t\t{format_predicate(predicate, include_types=False).replace('?','')}\n")
+                # file.write("\t)\n")
+
+                # TODO: better checking for empty init/goal than checking empty string
+                # TODO: less hacky removal of question marks  from init and goal strings
+                init_str = format_conditions(problem_pddl['init']).replace('?','')
+                if init_str == '':
+                    file.write(f"\t(:init )\n")
+                else:
+                    file.write(f"\t(:init {format_conditions(problem_pddl['init']).replace('?','').replace('|','-')})\n")
+                goal_str = format_conditions(problem_pddl['goal']).replace('?','')
+                if goal_str == '':
+                    file.write(f"\t(:goal )\n")
+                else:
+                    file.write(f"\t(:goal (and {format_conditions(problem_pddl['goal']).replace('?','').replace('|','-')}))\n")
+
+                file.write(")")
+
+        problem_starttime = time.time()
+        save_pddl_problem()
+        command = 'docker cp pddl_workingdir/habitat_problem.pddl pddl_manual_dev:/root/workingdir'
+        subprocess.call(command, shell=True)
+        problem_endtime = time.time()
+        print(f"\n\n@@@ Problem processing time (no current state) = {round(problem_endtime-problem_starttime,3)} @@@\n\n")
+        # @@@ Problem processing time (no current state) = 0.05 @@@
+        # in non debug mode: @@@ Problem processing time (no current state) = 0.049 @@@
+
+
+        '''
+        Initial pass at using AI-Planning/pddl parser repo. Hierarchical types are not supported.
+
+        from pddl.logic import Predicate, constants, variables
+        from pddl.core import Domain, Problem, Action, Requirements
+        from pddl.formatter import domain_to_string, problem_to_string
+
+        # constants = cabinet push points and refrigerator push points
+        # variables = robot, objects
+        
+
+        # predicates:
+        # e.g. problem.predicates['in']
+        # orig 'in': args=(obj type, art obj type)
+        # 
+
+        # types
+            # e.g. obj -->
+                # rigid obj
+                # articulated  obj
+            # parser saves type as most specific type listed in python objects
+            # post-processing replaces domain overall type definition with proper hierarchy
+
+        
+        obj_var = variables(
+            self._pddl_problem.predicates['in']._args[0].name, 
+            types=[self._pddl_problem.predicates['in']._args[0].expr_type.name])
+        
+        consts_names = list(self._pddl_problem.constants.keys())
+        consts_types = [self._pddl_problem.constants[name].expr_type.name for name in consts_names]
+        #consts_names, consts_types = zip(*[name, const.expr_type.name for name, const in self._pddl_problem.constants.items()])
+        consts = constants(consts_names, types=[consts_types])
+
+        pred_variables = []
+        pred_variables2 = {}
+        for name, entity in self._pddl_problem.all_entities.items():
+            if name in consts_names: continue
+            pred_variables.append(variables([name], [entity.expr_type.name]))
+            pred_variables2[name] = variables([name], [entity.expr_type.name])
+
+        predicates = []
+        for name, pred in self._pddl_problem.predicates.items():
+            pred_vars = []
+            predicates.append(Predicate(name, *pred_vars))
+        
+        actions = []
+        for name, action in self._pddl_problem.actions.items():
+            pass
+        '''
+
+
+
+
+
+
         skill_i = 0
         for (
             skill_name,
@@ -118,6 +468,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             observation_space,
             action_space,
         )
+        self._high_level_policy.save_pddl_problem_fn = save_pddl_problem
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
         )
@@ -211,6 +562,7 @@ class HierarchicalPolicy(nn.Module, Policy):
     def act(
         self,
         observations,
+        bound_pddl_probs,
         rnn_hidden_states,
         prev_actions,
         masks,
@@ -293,6 +645,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 hl_info,
             ) = self._high_level_policy.get_next_skill(
                 observations,
+                bound_pddl_probs,
                 rnn_hidden_states,
                 prev_actions,
                 masks,

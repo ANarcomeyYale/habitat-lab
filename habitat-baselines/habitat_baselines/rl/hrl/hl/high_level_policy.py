@@ -62,6 +62,7 @@ class HighLevelPolicy(nn.Module):
     def get_next_skill(
         self,
         observations,
+        bound_pddl_probs,
         rnn_hidden_states: torch.Tensor,
         prev_actions: torch.Tensor,
         masks: torch.Tensor,

@@ -294,14 +294,14 @@ class HabGymWrapper(gym.Wrapper):
     def reset(
         self, *args, return_info: bool = False, **kwargs
     ) -> Union[HabGymWrapperObsType, Tuple[HabGymWrapperObsType, dict]]:
-        obs = self.env.reset(*args, return_info=return_info, **kwargs)
+        obs, bound_pddl = self.env.reset(*args, return_info=return_info, **kwargs)
         if return_info:
             obs, info = obs
             self._last_obs = obs
-            return self._transform_obs(obs), info
+            return self._transform_obs(obs), info, bound_pddl
         else:
             self._last_obs = obs
-            return self._transform_obs(obs)
+            return self._transform_obs(obs), bound_pddl
 
     def render(self, mode: str = "human", **kwargs):
         last_infos = self.env.get_info(observations=None)

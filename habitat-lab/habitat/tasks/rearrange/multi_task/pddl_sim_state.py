@@ -260,10 +260,19 @@ class PddlSimState:
                 # an object is inside of a receptacle.
                 if not self._is_object_inside(entity, target, sim_info):
                     return False
-            elif sim_info.check_type_matches(target, GOAL_TYPE):
+            elif sim_info.check_type_matches(target, OBJ_TYPE):
                 obj_idx = cast(
                     int, sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
                 )
+                # Previously: at predicate supports an entity of type obj_type, which includes goal_type
+                    # either restrict what <at> supports or expand here
+                    # answer: limit at predicate to rigid_obj_type, since it doesn't make sense to use goal_type anyway?
+                        # counter: checking if the target is co-located with other static object uses goal_type
+                        # counter counter: search for entity function looks within these restrictions, so
+                            # options are updating search for entity to support more general parent types or restrict predicates
+                # short term solution: restrict at predicate to rigid_obj_types
+                # long term solution: try entity search for all types within obj_type=(goal_type or rigid_obj_type)
+                # TODO: systematically document how each type is used in practice to define more precisely
                 abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
                 cur_pos = rom.get_object_by_id(
                     abs_obj_id
@@ -272,6 +281,9 @@ class PddlSimState:
                 targ_idx = cast(
                     int, sim_info.search_for_entity(target, GOAL_TYPE)
                 )
+                # TODO: will a target of type rigid_obj_type or obj_type or static_obj_type fail here despite passing
+                    # the <at> predicate requirement of static_obj_type and evaluating here?
+                    # answer: rigid_obj_type fails, but cab or fridge types within static_obj_type are fine
                 idxs, pos_targs = sim_info.sim.get_targets()
                 targ_pos = pos_targs[list(idxs).index(targ_idx)]
 

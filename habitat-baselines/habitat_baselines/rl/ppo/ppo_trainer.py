@@ -77,6 +77,8 @@ from habitat_baselines.utils.info_dict import (
     extract_scalars_from_infos,
 )
 
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
@@ -948,7 +950,7 @@ class PPOTrainer(BaseRLTrainer):
             self.agent.load_state_dict(ckpt_dict["state_dict"])
         self.actor_critic = self.agent.actor_critic
 
-        observations = self.envs.reset()
+        observations, bound_pddl_probs = zip(*self.envs.reset())
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
@@ -1018,6 +1020,7 @@ class PPOTrainer(BaseRLTrainer):
             with inference_mode():
                 action_data = self.actor_critic.act(
                     batch,
+                    bound_pddl_probs,
                     test_recurrent_hidden_states,
                     prev_actions,
                     not_done_masks,
@@ -1063,6 +1066,7 @@ class PPOTrainer(BaseRLTrainer):
             )
             for i in range(len(policy_infos)):
                 infos[i].update(policy_infos[i])
+            observations = [o[0] if (isinstance(o, tuple) and isinstance(o[1], PddlProblem)) else o for o in observations]
             batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,
