@@ -311,8 +311,35 @@ class HierarchicalPolicy(nn.Module, Policy):
             if current_state is None:
                 init_pddl = condition_to_dict(self._pddl_problem.init)
             else:
-                # TODO
-                init_pddl = None
+                # TODO: precompute this only once
+                type_to_entities = defaultdict(set)
+                for name, entity in self._pddl_problem._constants.items():
+                    type = entity.expr_type
+                    while type is not None:
+                        type_to_entities[type.name].add(entity)
+                        type = type.parent
+
+                for name, entity in self._pddl_problem._objects.items():
+                    type = entity.expr_type
+                    while type is not None:
+                        type_to_entities[type.name].add(entity)
+                        type = type.parent
+
+                init_preds = []
+                init_preds_all = []
+                for pred in current_state.predicates.values():
+                    all_arg_values = [type_to_entities[arg.expr_type.name] for arg in pred._args]
+                    arg_combinations = itertools.product(*all_arg_values)
+                    for args in arg_combinations:
+                        this_pred = pred.clone()
+                        this_pred.set_param_values(args)
+                        if this_pred.is_true(current_state):
+                            init_preds.append(this_pred)
+                        init_preds_all.append(this_pred)
+
+                # TODO: in non-debug mode, get around sim pickle issue by extracting these true predicates instead of entire PddlProblem object 
+
+                init_pddl = condition_to_dict(self._pddl_problem.init) + condition_to_dict(init_preds)
 
             goal_pddl = condition_to_dict(self._pddl_problem.goal)
 
