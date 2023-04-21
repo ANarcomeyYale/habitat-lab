@@ -13,6 +13,9 @@ from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalQuantifierType,
 )
 
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import PddlSimInfo
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+
 def format_reqs(requirements):
         return ':' + ' :'.join(requirements)
 
@@ -149,6 +152,34 @@ def write_pddl_domain(pddl_domain, domain_filename="pddl_workingdir/habitat_doma
 
         file.write(")")
 
+def get_current_predicates(pddl_problem: PddlProblem, current_state: PddlSimInfo):
+    # TODO: precompute this only once
+    type_to_entities = defaultdict(set)
+    for name, entity in pddl_problem._constants.items():
+        type = entity.expr_type
+        while type is not None:
+            type_to_entities[type.name].add(entity)
+            type = type.parent
+
+    for name, entity in pddl_problem._objects.items():
+        type = entity.expr_type
+        while type is not None:
+            type_to_entities[type.name].add(entity)
+            type = type.parent
+
+    init_preds = []
+    init_preds_all = []
+    for pred in current_state.predicates.values():
+        all_arg_values = [type_to_entities[arg.expr_type.name] for arg in pred._args]
+        arg_combinations = itertools.product(*all_arg_values)
+        for args in arg_combinations:
+            this_pred = pred.clone()
+            this_pred.set_param_values(args)
+            if this_pred.is_true(current_state):
+                init_preds.append(this_pred)
+            init_preds_all.append(this_pred)
+    return init_preds
+
 def save_pddl_problem(pddl_problem, problem_filename="pddl_workingdir/habitat_problem.pddl", current_state=None):
 
     objects = [{"name": obj.name, "type": obj.expr_type.name} for obj in pddl_problem._objects.values()]
@@ -159,31 +190,7 @@ def save_pddl_problem(pddl_problem, problem_filename="pddl_workingdir/habitat_pr
     if current_state is None:
         init_pddl = condition_to_dict(pddl_problem.init)
     else:
-        # TODO: precompute this only once
-        type_to_entities = defaultdict(set)
-        for name, entity in pddl_problem._constants.items():
-            type = entity.expr_type
-            while type is not None:
-                type_to_entities[type.name].add(entity)
-                type = type.parent
-
-        for name, entity in pddl_problem._objects.items():
-            type = entity.expr_type
-            while type is not None:
-                type_to_entities[type.name].add(entity)
-                type = type.parent
-
-        init_preds = []
-        init_preds_all = []
-        for pred in current_state.predicates.values():
-            all_arg_values = [type_to_entities[arg.expr_type.name] for arg in pred._args]
-            arg_combinations = itertools.product(*all_arg_values)
-            for args in arg_combinations:
-                this_pred = pred.clone()
-                this_pred.set_param_values(args)
-                if this_pred.is_true(current_state):
-                    init_preds.append(this_pred)
-                init_preds_all.append(this_pred)
+        init_preds = get_current_predicates(pddl_problem, current_state)
 
         # TODO: in non-debug mode, get around sim pickle issue by extracting these true predicates instead of entire PddlProblem object 
 
