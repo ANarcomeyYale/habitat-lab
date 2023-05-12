@@ -7,7 +7,7 @@ from typing import List, Tuple
 import torch
 
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
-from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import DOCKER_NAME
+from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import save_pddl_problem, DOCKER_NAME
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 
@@ -24,8 +24,6 @@ MAX_HIGH_LEVEL_ACTIONS = 30
 # TODO: tensorboard logging of the high level plan, success of failure of each action, success of the task
 # TODO: speeding things up
     # precompute where possible
-
-# TODO: migrate save pddl fn from importing via object to importing direct from pddl_conversion_utils
 
 class FixedHighLevelPolicy(HighLevelPolicy):
     """
@@ -209,7 +207,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 # highly variable depending on the action and how long it takes
 
 
-                self.save_pddl_problem_fn(
+                save_pddl_problem(
                     bound_pddl_probs[batch_idx],
                     problem_filename=f"pddl_workingdir/habitat_problem_{batch_idx}.pddl", 
                     current_state=bound_pddl_probs[batch_idx]._sim_info)

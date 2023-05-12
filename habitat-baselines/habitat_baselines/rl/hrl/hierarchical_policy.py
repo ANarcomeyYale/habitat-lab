@@ -147,7 +147,6 @@ class HierarchicalPolicy(nn.Module, Policy):
             observation_space,
             action_space,
         )
-        self._high_level_policy.save_pddl_problem_fn = save_pddl_problem
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
         )
