@@ -213,6 +213,9 @@ actions:
         habitat.task.base_noise: 0.0
         habitat.task.should_save_to_cache: False
 
+  # TODO: placing an object means at(obj, robot) is true, but this  doesn't get reset when the robot moves
+    # solution: nav action must undo all robot_at predicates. Ideally conditionally if robot_at was already true. However, it could navigate to an equivalent location and still be nearby
+    # workaround: nav action doesn't check for co-located objects/locations, so this shouldn't actually be an issue. Only at one location at a time, even if distances are 0
   - name: place
     parameters:
       - name: place_obj
@@ -229,6 +232,9 @@ actions:
     postcondition:
       - not_holding(robot)
       - at(place_obj, obj)
+      - expr_type: NOT
+        sub_exprs:
+        - holding(place_obj, robot)
     task_info:
       task: RearrangePlaceTask-v0
       task_def: "place"
