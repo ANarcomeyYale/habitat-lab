@@ -15,7 +15,7 @@ from habitat.tasks.rearrange.multi_task.composite_sensors import (
     CompositeSuccess,
 )
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import write_pddl_domain, save_pddl_problem
+from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import write_pddl_domain, save_pddl_problem, DOCKER_NAME
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
@@ -88,7 +88,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         domain_starttime = time.time()
         domain_filename="pddl_workingdir/habitat_domain.pddl"
         write_pddl_domain(self._pddl_problem, domain_filename)
-        command = f'docker cp {domain_filename} pddl_manual_dev:/root/workingdir'
+        command = f'docker cp {domain_filename} {DOCKER_NAME}:/root/workingdir'
         subprocess.call(command, shell=True)
         domain_endtime = time.time()
 
@@ -100,7 +100,7 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         problem_starttime = time.time()
         save_pddl_problem(self._pddl_problem)
-        command = 'docker cp pddl_workingdir/habitat_problem.pddl pddl_manual_dev:/root/workingdir'
+        command = f'docker cp pddl_workingdir/habitat_problem.pddl {DOCKER_NAME}:/root/workingdir'
         subprocess.call(command, shell=True)
         problem_endtime = time.time()
         print(f"\n\n@@@ Problem processing time (no current state) = {round(problem_endtime-problem_starttime,3)} @@@\n\n")

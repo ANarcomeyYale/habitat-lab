@@ -7,6 +7,7 @@ from typing import List, Tuple
 import torch
 
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
+from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import DOCKER_NAME
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 
@@ -23,6 +24,8 @@ MAX_HIGH_LEVEL_ACTIONS = 30
 # TODO: tensorboard logging of the high level plan, success of failure of each action, success of the task
 # TODO: speeding things up
     # precompute where possible
+
+# TODO: migrate save pddl fn from importing via object to importing direct from pddl_conversion_utils
 
 class FixedHighLevelPolicy(HighLevelPolicy):
     """
@@ -212,7 +215,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                     current_state=bound_pddl_probs[batch_idx]._sim_info)
                 
                 # TODO: replace subprocess calls with Docker API calls for greater safety/security
-                command = f'docker cp pddl_workingdir/habitat_problem_{batch_idx}.pddl pddl_manual_dev:/root/workingdir'
+                command = f'docker cp pddl_workingdir/habitat_problem_{batch_idx}.pddl {DOCKER_NAME}:/root/workingdir'
                 subprocess.call(command, shell=True)
                 problem_endtime = time.time()
                 print(f"\n\n@@@ Problem processing time (with current state) = {round(problem_endtime-problem_starttime,3)} @@@\n\n")
@@ -221,7 +224,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 planning_starttime = time.time()
                 #command = 'docker exec --workdir /root/workingdir pddl_manual_dev optic habitat_domain.pddl habitat_problem.pddl >> plan.txt'
                 #command = 'python3 -c "import planutils; planutils.main()" run optic habitat_domain.pddl habitat_problem.pddl >> plan.txt'
-                command = f'docker exec --workdir /root/workingdir pddl_manual_dev python3 -c "import planutils; planutils.main()" run optic habitat_domain.pddl habitat_problem_{batch_idx}.pddl >> pddl_workingdir/plan_{batch_idx}.txt'
+                command = f'docker exec --workdir /root/workingdir {DOCKER_NAME} python3 -c "import planutils; planutils.main()" run optic habitat_domain.pddl habitat_problem_{batch_idx}.pddl >> pddl_workingdir/plan_{batch_idx}.txt'
                 subprocess.call(f'rm pddl_workingdir/plan_{batch_idx}.txt', shell=True)
                 subprocess.call(command, shell=True)
                 #command = f'docker cp pddl_manual_dev:/root/workingdir/plan_{batch_idx}.txt pddl_workingdir'

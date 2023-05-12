@@ -18,6 +18,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import PddlSimInfo
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 
 EPISODE_COST_NAME = 'episode-cost'
+DOCKER_NAME = 'pddl_manual_dev5'
 
 # TODO: better handling of consts passing through all these functions.
 def format_reqs(requirements):
