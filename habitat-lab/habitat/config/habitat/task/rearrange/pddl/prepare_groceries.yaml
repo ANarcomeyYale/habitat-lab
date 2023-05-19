@@ -4,6 +4,7 @@ init:
   - closed_cab(cab_push_point_6)
   - closed_cab(cab_push_point_7)
   - opened_fridge(fridge_push_point)
+  - robot_at(START, robot_0)
 
 goal:
   expr_type: AND
@@ -14,6 +15,9 @@ goal:
     - not_holding(robot_0)
 
 objects:
+  - name: START
+    expr_type: goal_type
+  
   - name: obj0_target|0
     expr_type: rigid_obj_type
   - name: TARGET_obj0_target|0
@@ -67,17 +71,17 @@ stage_goals:
       - at(obj2_target|2,TARGET_obj2_target|2)
 
 solution:
-  - nav(obj0_target|0, robot_0)
+  - nav(START, obj0_target|0, robot_0)
   - pick(obj0_target|0, robot_0)
-  - nav(TARGET_obj0_target|0, robot_0)
+  - nav(obj0_target|0, TARGET_obj0_target|0, robot_0)
   - place(obj0_target|0,TARGET_obj0_target|0, robot_0)
 
-  - nav(obj1_target|1, robot_0)
+  - nav(TARGET_obj0_target|0, obj1_target|1, robot_0)
   - pick(obj1_target|1, robot_0)
-  - nav(TARGET_obj1_target|1, robot_0)
+  - nav(obj1_target|1, TARGET_obj1_target|1, robot_0)
   - place(obj1_target|1,TARGET_obj1_target|1, robot_0)
 
-  - nav(obj2_target|2, robot_0)
+  - nav(TARGET_obj1_target|1, obj2_target|2, robot_0)
   - pick(obj2_target|2, robot_0)
-  - nav(TARGET_obj2_target|2, robot_0)
+  - nav(obj2_target|2, TARGET_obj2_target|2, robot_0)
   - place(obj2_target|2,TARGET_obj2_target|2, robot_0)
