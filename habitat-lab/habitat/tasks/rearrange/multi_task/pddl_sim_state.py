@@ -335,6 +335,9 @@ class PddlSimState:
             if not sim_info.check_type_matches(
                 entity, SimulatorObjectType.MOVABLE_ENTITY.value
             ):
+                # TODO: at and in predicates originally supported obj_type, but here
+                # it only supports moveable entitty. For now, both predicates only support
+                # moveable entity. If desired to support goal objects as the entity, change here
                 raise ValueError(f"Got unexpected entity {entity}")
             obj_idx = cast(int, sim_info.search_for_entity(entity))
             abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
@@ -352,8 +355,10 @@ class PddlSimState:
             ):
                 cur_pos = entity_obj.transformation.translation
 
+                # TODO: replace with sim_info.get_entity pos to centralize use of START?
                 if target.name == "START":
-                    targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
+                    targ_pos = mn.Vector3(sim_info.episode.start_position)
+                    #targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
                 else:
                     targ_idx = cast(
                         int,
@@ -402,7 +407,31 @@ class PddlSimState:
             ):
                 recep = cast(mn.Range3D, sim_info.search_for_entity(target))
                 return recep.contains(entity_obj.translation)
+            elif sim_info.check_type_matches(
+                target, SimulatorObjectType.MOVABLE_ENTITY.value
+            ):
+                cur_pos = entity_obj.transformation.translation
+                
+                target_idx = cast(int, sim_info.search_for_entity(target))
+                abs_target_id = sim_info.sim.scene_obj_ids[target_idx]
+                target_obj = rom.get_object_by_id(abs_target_id)
+                targ_pos = target_obj.transformation.translation
+
+                dist = np.linalg.norm(cur_pos - targ_pos)
+                if dist >= sim_info.obj_thresh:
+                    return False
+
+                '''
+                targ_idx = cast(
+                        int,
+                        sim_info.search_for_entity(target),
+                    )
+                    idxs, pos_targs = sim_info.sim.get_targets()
+                    targ_pos = pos_targs[list(idxs).index(targ_idx)]
+                '''
+
             else:
+                import pdb; pdb.set_trace()
                 raise ValueError(
                     f"Got unexpected combination of {entity} and {target}"
                 )
@@ -448,7 +477,8 @@ class PddlSimState:
                 target, SimulatorObjectType.GOAL_ENTITY.value
             ):
                 if target.name == "START":
-                    targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
+                    # targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
+                    targ_pos = mn.Vector3(sim_info.episode.start_position)
                 else:
                     targ_idx = cast(
                         int,

@@ -156,7 +156,7 @@ class PddlDomain:
         if isinstance(to_parse, str):
             return self.parse_predicate(to_parse, existing_entities)
         elif isinstance(to_parse,  dict):
-            return self._parse_only_logical_expr(to_parse, existing_entities)
+            return self.parse_only_logical_expr(to_parse, existing_entities)
         else:
             raise ValueError()
     

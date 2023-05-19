@@ -43,9 +43,11 @@ def format_objects(objs):
 
 def format_parameters(params, constants, include_types=True):
     if include_types:
-        return ' '.join([f"?{arg_name} - {arg_type}" for arg_name, arg_type in params.items()])
+        #return ' '.join([f"?{arg_name} - {arg_type}" for arg_name, arg_type in params.items()])
+        return ' '.join([f"?{arg_name} - {arg_type}" for arg_name, arg_type in params])
     else:
-        return ' '.join([f"{arg_name}" if arg_name in constants else f"?{arg_name}" for arg_name in params.keys()])
+        #return ' '.join([f"{arg_name}" if arg_name in constants else f"?{arg_name}" for arg_name in params.keys()])
+        return ' '.join([f"{arg_name}" if arg_name in constants else f"?{arg_name}" for arg_name, arg_type in params])
 
 def format_predicate(pred, constants, include_types=True):
     #args_str = ' '.join([f"?{arg_name} - {arg_type}" for arg_name, arg_type in pred["params"].items()])
@@ -85,10 +87,11 @@ def predicate_to_dict(pred, use_arg_values=False):
             raise ValueError
     else:
         args = pred._arg_values if use_arg_values else pred._args 
-        return {'name': pred.name, 'params': {
-            arg.name:arg.expr_type.name for arg in args}
+        return {'name': pred.name, 'params': [
+            (arg.name, arg.expr_type.name) for arg in args]
         }
         # TODO: should params be a list of tuples to maintain guaranteed order?
+        # changed to list of tuples to allow repeated arguments, e.g. at (obj1, obj1)
 
 def condition_to_dict(cond):
     if isinstance(cond, list):
@@ -105,7 +108,7 @@ def condition_to_dict(cond):
 def action_to_dict(action):
     return {
             'name': action.name,
-            'params': {arg.name:arg.expr_type.name for arg in action._params},
+            'params': [(arg.name, arg.expr_type.name) for arg in action._params],
             'pre_condition': condition_to_dict(action._pre_cond),
             'post_condition': condition_to_dict(action._post_cond)
         }

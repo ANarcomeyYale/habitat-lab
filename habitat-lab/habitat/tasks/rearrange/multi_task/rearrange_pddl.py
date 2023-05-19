@@ -178,7 +178,8 @@ class PddlSimInfo:
                 return pos_targs[rel_idx]
             elif ename == "START":
                 pos = self.episode.start_position
-                return np.array(pos)
+                #return np.array(pos)
+                return mn.Vector3(pos)
         if self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
