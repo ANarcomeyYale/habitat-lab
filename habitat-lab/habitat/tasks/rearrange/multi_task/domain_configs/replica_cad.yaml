@@ -111,7 +111,7 @@ predicates:
   - name: at
     args:
       - name: obj
-        expr_type: obj_type
+        expr_type: rigid_obj_type
       - name: at_entity
         expr_type: static_obj_type
     set_state:
@@ -119,15 +119,38 @@ predicates:
             obj: at_entity
 
 actions:
+  # - name: nav
+  #   parameters:
+  #     - name: obj
+  #       expr_type: obj_type
+  #     - name: robot
+  #       expr_type: articulated_agent_type
+  #   precondition: null
+  #   postcondition:
+  #     - robot_at(obj, robot)
+  #   task_info:
+  #     task: NavToObjTask-v0
+  #     task_def: "nav_to_obj"
+  #     config_args:
+  #       task.force_regenerate: True
+  #       task.should_save_to_cache: False
   - name: nav
     parameters:
-      - name: obj
+      - name: source_obj
+        expr_type: obj_type
+      - name: dest_obj
         expr_type: obj_type
       - name: robot
         expr_type: robot_entity_type
-    precondition: null
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(source_obj, robot)
     postcondition:
-      - robot_at(obj, robot)
+      - robot_at(dest_obj, robot)
+      - expr_type: NOT
+        sub_exprs:
+        - robot_at(source_obj, robot)
     task_info:
       task: NavToObjTask-v0
       task_def: "nav_to_obj"
@@ -166,14 +189,15 @@ actions:
       expr_type: AND
       sub_exprs:
         - robot_at(obj, robot)
-        - quantifier: FORALL
-          inputs:
-            - name: recep
-              expr_type: cab_type
-          expr_type: NAND
-          sub_exprs:
-            - in(obj, recep)
-            - closed_cab(recep)
+        # TODO: recreate this precondition without negations
+        # - quantifier: FORALL
+        #   inputs:
+        #     - name: recep
+        #       expr_type: cab_type
+        #   expr_type: NAND
+        #   sub_exprs:
+        #     - in(obj, recep)
+        #     - closed_cab(recep)
     postcondition:
       - holding(obj, robot)
     task_info:
@@ -186,6 +210,9 @@ actions:
         habitat.task.base_noise: 0.0
         habitat.task.should_save_to_cache: False
 
+  # TODO: placing an object means at(obj, robot) is true, but this  doesn't get reset when the robot moves
+    # solution: nav action must undo all robot_at predicates. Ideally conditionally if robot_at was already true. However, it could navigate to an equivalent location and still be nearby
+    # workaround: nav action doesn't check for co-located objects/locations, so this shouldn't actually be an issue. Only at one location at a time, even if distances are 0
   - name: place
     parameters:
       - name: place_obj
@@ -202,6 +229,9 @@ actions:
     postcondition:
       - not_holding(robot)
       - at(place_obj, obj)
+      - expr_type: NOT
+        sub_exprs:
+        - holding(place_obj, robot)
     task_info:
       task: RearrangePlaceTask-v0
       task_def: "place"

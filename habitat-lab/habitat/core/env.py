@@ -259,14 +259,14 @@ class Env:
         assert self._current_episode is not None, "Reset requires an episode"
         self.reconfigure(self._config)
 
-        observations = self.task.reset(episode=self.current_episode)
+        observations, bound_pddl = self.task.reset(episode=self.current_episode, return_bound_pddl=True)
         self._task.measurements.reset_measures(
             episode=self.current_episode,
             task=self.task,
             observations=observations,
         )
 
-        return observations
+        return observations, bound_pddl
 
     def _update_step_stats(self) -> None:
         self._elapsed_steps += 1
@@ -416,16 +416,18 @@ class RLEnv(gym.Env):
                 episode_id=self._env.current_episode.episode_id,
                 scene_id=self._env.current_episode.scene_id,
             )
+        # TODO? here, return the true predicates with each call, so that the high level policy
+        # gets up to date info without breaking pickling of reset() return values
 
     @profiling_wrapper.RangeContext("RLEnv.reset")
     def reset(
         self, *, return_info: bool = False, **kwargs
     ) -> Union[Observations, Tuple[Observations, Dict]]:
-        observations = self._env.reset()
+        observations, bound_pddl = self._env.reset()
         if return_info:
-            return observations, self.get_info(observations)
+            return observations, self.get_info(observations), bound_pddl
         else:
-            return observations
+            return observations, bound_pddl
 
     def get_reward_range(self):
         r"""Get min, max range of reward.

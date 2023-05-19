@@ -40,6 +40,7 @@ class EnvCountEpisodeWrapper(Wrapper):
                 start_position=[],
                 start_rotation=[],
             )
+    # TODO? return pddl true predicates along with current episode object, so it remains pickle-able
 
     @property
     def original_action_space(self) -> spaces.space:

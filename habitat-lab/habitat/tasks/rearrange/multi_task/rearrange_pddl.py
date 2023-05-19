@@ -24,6 +24,7 @@ class SimulatorObjectType(Enum):
     ARTICULATED_RECEPTACLE_ENTITY = "art_receptacle_entity_type"
     GOAL_ENTITY = "goal_entity_type"
     ROBOT_ENTITY = "robot_entity_type"
+    OBJ_ENTITY =  "obj_type"
 
 
 def parse_func(x: str) -> Tuple[str, List[str]]:
@@ -66,6 +67,8 @@ class ExprType:
 
         return other_type.name in all_types
 
+    # TODO: add __eq__ operator?
+    
     def __repr__(self):
         return f"T:{self.name}"
 
@@ -126,13 +129,14 @@ def ensure_entity_lists_match(
 class PddlSimInfo:
     obj_ids: Dict[str, int]
     target_ids: Dict[str, int]
+    #episode_locs: Dict[str, int]
     art_handles: Dict[str, int]
     marker_handles: Dict[str, MarkerInfo]
     robot_ids: Dict[str, int]
 
-    sim: RearrangeSim
+    sim: RearrangeSim #can't pickle
     dataset: RearrangeDatasetV0
-    env: RearrangeTask
+    env: RearrangeTask # can't pickle due to SceneNode
     episode: Episode
     obj_thresh: float
     art_thresh: float
@@ -167,10 +171,14 @@ class PddlSimInfo:
         if self.check_type_matches(
             entity, SimulatorObjectType.GOAL_ENTITY.value
         ):
-            idx = self.target_ids[ename]
-            targ_idxs, pos_targs = self.sim.get_targets()
-            rel_idx = targ_idxs.tolist().index(idx)
-            return pos_targs[rel_idx]
+            if ename in self.target_ids:
+                idx = self.target_ids[ename]
+                targ_idxs, pos_targs = self.sim.get_targets()
+                rel_idx = targ_idxs.tolist().index(idx)
+                return pos_targs[rel_idx]
+            elif ename == "START":
+                pos = self.episode.start_position
+                return np.array(pos)
         if self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
@@ -186,7 +194,44 @@ class PddlSimInfo:
                 abs_obj_id
             ).transformation.translation
             return cur_pos
-        raise ValueError()
+        # entity obj-T:obj_type with name 'obj' fails this elif cascade
+        else:
+            raise ValueError()
+        # elif self.check_type_matches(entity, GOAL_TYPE):
+        #     if ename in self.target_ids:
+        #         idx = self.target_ids[ename]
+        #         targ_idxs, pos_targs = self.sim.get_targets()
+        #         rel_idx = targ_idxs.tolist().index(idx)
+        #         return pos_targs[rel_idx]
+        #     elif ename == "START":
+        #         pos = self.episode.start_position
+        #         return np.array(pos)
+        # elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
+        #     rom = self.sim.get_rigid_object_manager()
+        #     idx = self.obj_ids[ename]
+        #     abs_obj_id = self.sim.scene_obj_ids[idx]
+        #     cur_pos = rom.get_object_by_id(
+        #         abs_obj_id
+        #     ).transformation.translation
+        #     return cur_pos
+        # entity obj-T:obj_type with name 'obj' fails this elif cascade
+
+    # TODO: is this deprecated now?
+    def search_for_entity_any(self, entity: PddlEntity):
+        ename = entity.name
+        if self.check_type_matches(entity, articulated_agent_type):
+            return self.robot_ids[ename]
+        elif self.check_type_matches(entity, ART_OBJ_TYPE):
+            return self.marker_handles[ename]
+        elif self.check_type_matches(entity, GOAL_TYPE):
+            if ename == "START":
+                return ename
+            else:
+                return self.target_ids[ename]
+        elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
+            return self.obj_ids[ename]
+        else:
+            raise ValueError()
 
     def search_for_entity(
         self, entity: PddlEntity
@@ -204,7 +249,10 @@ class PddlSimInfo:
         elif self.check_type_matches(
             entity, SimulatorObjectType.GOAL_ENTITY.value
         ):
-            return self.target_ids[ename]
+            if ename == "START":
+                return ename
+            else:
+                return self.target_ids[ename]
         elif self.check_type_matches(
             entity, SimulatorObjectType.MOVABLE_ENTITY.value
         ):
@@ -214,5 +262,21 @@ class PddlSimInfo:
         ):
             asset_name = ename.split("_:")[0]
             return self.receptacles[asset_name]
+        # elif expected_type == GOAL_TYPE:
+        #     if ename == "START":
+        #         return ename
+        #     else:
+        #         return self.target_ids[ename]
+        # elif expected_type == RIGID_OBJ_TYPE:
+        #     return self.obj_ids[ename]
+        # elif expected_type == OBJ_TYPE:
+        #     if ename in self.obj_ids and ename in self.target_ids:
+        #         raise ValueError("Entity is both an object and a target")
+        #     elif ename in self.obj_ids:
+        #         return self.obj_ids[ename]
+        #     elif ename in self.target_ids:
+        #         return self.target_ids[ename]
+        #     else:
+        #         raise ValueError("Entity is neither an object nor a target")
         else:
             raise ValueError(f"No type match for {entity}")

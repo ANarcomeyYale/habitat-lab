@@ -18,6 +18,9 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import (
     PddlDomain,
     PddlProblem,
 )
+from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import (
+    write_pddl_domain, save_pddl_problem, DOCKER_NAME
+)
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
@@ -40,6 +43,11 @@ from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
+from collections import defaultdict
+
+import time
+import subprocess
+import itertools
 
 @baseline_registry.register_policy
 class HierarchicalPolicy(nn.Module, Policy):
@@ -94,6 +102,29 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
         )
+            
+        domain_starttime = time.time()
+        domain_filename="pddl_workingdir/habitat_domain.pddl"
+        write_pddl_domain(self._pddl, domain_filename)
+        command = f'docker cp {domain_filename} {DOCKER_NAME}:/root/workingdir'
+        subprocess.call(command, shell=True)
+        domain_endtime = time.time()
+
+        print(f"\n\n@@@ Domain processing time = {round(domain_endtime-domain_starttime,3)} @@@\n\n")
+        # @@@ Domain processing time = 0.061 @@@
+        # in non debug mode: @@@ Domain processing time = 0.054 @@@
+        
+        
+
+        problem_starttime = time.time()
+        save_pddl_problem(self._pddl)
+        command = f'docker cp pddl_workingdir/habitat_problem.pddl {DOCKER_NAME}:/root/workingdir'
+        subprocess.call(command, shell=True)
+        problem_endtime = time.time()
+        print(f"\n\n@@@ Problem processing time (no current state) = {round(problem_endtime-problem_starttime,3)} @@@\n\n")
+        # @@@ Problem processing time (no current state) = 0.05 @@@
+        # in non debug mode: @@@ Problem processing time (no current state) = 0.049 @@@
+
 
     def _create_skills(
         self, skills, observation_space, action_space, full_config
@@ -232,6 +263,7 @@ class HierarchicalPolicy(nn.Module, Policy):
     def act(
         self,
         observations,
+        bound_pddl_probs,
         rnn_hidden_states,
         prev_actions,
         masks,
@@ -314,6 +346,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 hl_info,
             ) = self._high_level_policy.get_next_skill(
                 observations,
+                bound_pddl_probs,
                 rnn_hidden_states,
                 prev_actions,
                 masks,

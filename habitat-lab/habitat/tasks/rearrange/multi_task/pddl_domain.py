@@ -121,8 +121,12 @@ class PddlDomain:
                 **{x.name: x for x in pre_cond.inputs},
                 **name_to_param,
             }
+            # post_cond = [
+            #     self.parse_predicate(p, postcond_entities)
+            
+            # Now allows not logical expressions in post conditions
             post_cond = [
-                self.parse_predicate(p, postcond_entities)
+                self._parse_logical_expr_or_predicate(p, postcond_entities)
                 for p in action_d["postcondition"]
             ]
             task_info_d = action_d.get("task_info", None)
@@ -147,6 +151,15 @@ class PddlDomain:
             self._orig_actions[action.name] = action
         self._actions = dict(self._orig_actions)
 
+    def _parse_logical_expr_or_predicate(self, to_parse: Union[str, dict], existing_entities: Dict[str, PddlEntity]
+    ) -> LogicalExpr:
+        if isinstance(to_parse, str):
+            return self.parse_predicate(to_parse, existing_entities)
+        elif isinstance(to_parse,  dict):
+            return self._parse_only_logical_expr(to_parse, existing_entities)
+        else:
+            raise ValueError()
+    
     def _parse_predicates(self, domain_def) -> None:
         """
         Fetches the PDDL predicates into `self.predicates`.
@@ -367,6 +380,7 @@ class PddlDomain:
                 f"TARGET_{id_to_name[idx]}": idx
                 for idx in sim.get_targets()[0]
             },
+            #episode_locs={"START": len(sim.get_targets()[0])}
             art_handles={k.handle: i for i, k in enumerate(sim.art_objs)},
             marker_handles=sim.get_all_markers(),
             robot_ids={
