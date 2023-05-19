@@ -104,6 +104,10 @@ class FixedHighLevelPolicy(HighLevelPolicy):
         for plan_step in plan:
             plan_step = plan_step.replace('-','|')
             # TODO: better hack than replacing | with - to satisfy pddl character restrictions
+            
+            plan_step = plan_step.replace('target_obj0_target|0', 'TARGET_obj0_target|0')
+            plan_step = plan_step.replace('target_obj1_target|1', 'TARGET_obj1_target|1')
+            plan_step = plan_step.replace('target_obj2_target|2', 'TARGET_obj2_target|2')
             plan_step = plan_step.replace('target_goal', 'TARGET_goal')
             plan_step = plan_step.replace('start', 'START')
             # TODO: better hack than capitalizing target goal. Optic planner forces lowercase.
@@ -192,6 +196,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                     self.fixed_plan_actions[batch_idx].append((skill_name, skill_args))
 
             fixed_plan = next_skill, skill_args_data, immediate_end, {}
+            #return fixed_plan
 
         next_skill = torch.zeros(self._num_envs)
         skill_args_data = [None for _ in range(self._num_envs)]
@@ -218,6 +223,8 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 problem_endtime = time.time()
                 print(f"\n\n@@@ Problem processing time (with current state) = {round(problem_endtime-problem_starttime,3)} @@@\n\n")
                 # @@@ Problem processing time (with current state) = 0.122 @@@
+                print("Problem.pddl:")
+                subprocess.call(f"cat pddl_workingdir/habitat_problem_{batch_idx}.pddl", shell=True)
 
                 planning_starttime = time.time()
                 #command = 'docker exec --workdir /root/workingdir pddl_manual_dev optic habitat_domain.pddl habitat_problem.pddl >> plan.txt'
