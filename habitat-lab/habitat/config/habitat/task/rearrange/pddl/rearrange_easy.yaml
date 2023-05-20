@@ -8,6 +8,9 @@ objects:
   - name: robot_0
     expr_type: robot_entity_type
 
+init:
+  - robot_at(START, robot_0)
+
 goal:
   expr_type: AND
   sub_exprs:
