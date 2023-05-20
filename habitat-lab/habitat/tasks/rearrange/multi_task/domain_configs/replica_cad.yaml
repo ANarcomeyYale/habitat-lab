@@ -205,6 +205,10 @@ actions:
     postcondition:
       - not_holding(robot)
       - at(place_obj, obj)
+      - expr_type: NOT
+        sub_exprs:
+        - holding(place_obj, robot)
+        - not_holding(robot)
     task_info:
       task: RearrangePlaceTask-v0
       task_def: "place"
