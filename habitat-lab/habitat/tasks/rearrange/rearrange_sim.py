@@ -349,12 +349,6 @@ class RearrangeSim(HabitatSim):
         else:
             return self.agents_mgr[agent_idx]
 
-    def get_agents_startpos(self, agent_idx: Optional[int]):
-        if agent_idx is None:
-            return self._agents_start_pos[0]
-        else:
-            return self._agents_start_pos[agent_idx]
-
     @property
     def num_articulated_agents(self):
         return len(self.agents_mgr)
@@ -401,9 +395,6 @@ class RearrangeSim(HabitatSim):
             self._targets[target_handle] = mn.Matrix4(
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
-        #self._targets['START_LOC'] = mn.Matrix4.identity_init()
-        #self._targets['START_LOC'] = mn.Matrix4.translation(mn.Vector3(ep_info.start_position))
-        # Issue: start loc is not a rigid object, so attmept at grabbing its start pos fails
 
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
