@@ -173,8 +173,12 @@ class PddlSimInfo:
                 rel_idx = targ_idxs.tolist().index(idx)
                 return pos_targs[rel_idx]
             elif ename == "START":
-                pos = self.episode.start_position
-                return mn.Vector3(pos)
+                #pos = self.episode.start_position
+                #startpos_agent = self.sim.get_agents_startpos(agent_idx=0)
+                # Note: above doesn't actually update, stays same as episode.start_position = 0,0,0
+                startpos_agent, _ = self.env._get_cached_articulated_agent_start(agent_idx=0)
+                # TODO: support muliple agents START pos
+                return mn.Vector3(startpos_agent)
         if self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):

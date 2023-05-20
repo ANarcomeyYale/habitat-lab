@@ -23,6 +23,7 @@ habitat:
     reward_measure: composite_subgoal_reward
     slack_reward: -0.01
     success_reward: 5.0
+    should_save_to_cache: True
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"

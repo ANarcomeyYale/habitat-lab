@@ -6,6 +6,7 @@
 
 import copy
 import os.path as osp
+import os
 from collections import OrderedDict
 from typing import Any, Dict, List, Tuple, Union
 
@@ -87,7 +88,9 @@ class RearrangeTask(NavigationTask):
             f"{fname}_{self._config.type}_robot_start.pickle",
         )
 
-        if self._config.should_save_to_cache or osp.exists(cache_path):
+        if self._config.should_save_to_cache:
+            if osp.exists(cache_path):
+                os.remove(cache_path)
             self._articulated_agent_init_cache = CacheHelper(
                 cache_path,
                 def_val={},
