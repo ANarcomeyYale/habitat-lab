@@ -17,6 +17,11 @@ stage_goals:
     expr_type: AND
     sub_exprs:
       - holding(goal0|0, robot_0)
+  stage_0_75:
+    expr_type: AND
+    sub_exprs:
+      - holding(goal0|0, robot_0)
+      - robot_at(TARGET_goal0|0, robot_0)
   stage_1:
     expr_type: AND
     sub_exprs:
