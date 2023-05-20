@@ -167,10 +167,14 @@ class PddlSimInfo:
         if self.check_type_matches(
             entity, SimulatorObjectType.GOAL_ENTITY.value
         ):
-            idx = self.target_ids[ename]
-            targ_idxs, pos_targs = self.sim.get_targets()
-            rel_idx = targ_idxs.tolist().index(idx)
-            return pos_targs[rel_idx]
+            if ename in self.target_ids:
+                idx = self.target_ids[ename]
+                targ_idxs, pos_targs = self.sim.get_targets()
+                rel_idx = targ_idxs.tolist().index(idx)
+                return pos_targs[rel_idx]
+            elif ename == "START":
+                pos = self.episode.start_position
+                return mn.Vector3(pos)
         if self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
@@ -204,7 +208,10 @@ class PddlSimInfo:
         elif self.check_type_matches(
             entity, SimulatorObjectType.GOAL_ENTITY.value
         ):
-            return self.target_ids[ename]
+            if ename == "START":
+                return ename
+            else:
+                return self.target_ids[ename]
         elif self.check_type_matches(
             entity, SimulatorObjectType.MOVABLE_ENTITY.value
         ):
