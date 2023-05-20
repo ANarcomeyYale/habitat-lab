@@ -130,7 +130,10 @@ actions:
         expr_type: obj_type
       - name: robot
         expr_type: robot_entity_type
-    precondition: null
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(source_obj, robot)
     postcondition:
       - robot_at(dest_obj, robot)
     task_info:
