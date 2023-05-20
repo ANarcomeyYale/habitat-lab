@@ -1,4 +1,7 @@
 types:
+  parent_type:
+    - robot_entity_type
+    - static_obj_type
   static_obj_type:
     - art_receptacle_entity_type
     - obj_type
@@ -26,7 +29,7 @@ predicates:
   - name: in
     args:
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
       - name: receptacle
         expr_type: art_receptacle_entity_type
     set_state:
@@ -111,7 +114,7 @@ predicates:
   - name: at
     args:
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
       - name: at_entity
         expr_type: static_obj_type
     set_state:
@@ -140,7 +143,7 @@ actions:
       - name: marker
         expr_type: art_receptacle_entity_type
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
       - name: robot
         expr_type: robot_entity_type
     precondition:
@@ -217,7 +220,7 @@ actions:
       - name: fridge_id
         expr_type: fridge_type
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
       - name: robot
         expr_type: robot_entity_type
     precondition:
@@ -242,7 +245,7 @@ actions:
       - name: fridge_id
         expr_type: fridge_type
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
       - name: robot
         expr_type: robot_entity_type
     precondition:
@@ -267,7 +270,7 @@ actions:
       - name: marker
         expr_type: cab_type
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
       - name: robot
         expr_type: robot_entity_type
     precondition:
@@ -290,7 +293,7 @@ actions:
       - name: marker
         expr_type: cab_type
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
       - name: robot
         expr_type: robot_entity_type
     precondition:
