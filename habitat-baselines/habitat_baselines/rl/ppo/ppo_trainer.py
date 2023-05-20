@@ -987,6 +987,18 @@ class PPOTrainer(BaseRLTrainer):
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
+                    PRINT_AGGREGATED_STATS_ONGOING = True
+                    if PRINT_AGGREGATED_STATS_ONGOING:
+                        aggregated_stats = {}
+                        for stat_key in next(iter(stats_episodes.values())).keys():
+                            aggregated_stats[stat_key] = np.mean(
+                                [v[stat_key] for v in stats_episodes.values()]
+                            )
+
+                        for k, v in aggregated_stats.items():
+                            logger.info(f"Average episode {k}: {v:.4f}")
+                            writer.add_scalar(f'Avg_Stats/{k}', v, global_step=pbar.n)
+
                     if (
                         len(self.config.habitat_baselines.eval.video_option)
                         > 0
