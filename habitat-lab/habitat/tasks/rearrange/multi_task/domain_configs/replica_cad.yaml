@@ -124,13 +124,15 @@ predicates:
 actions:
   - name: nav
     parameters:
-      - name: obj
+      - name: source_obj
+        expr_type: obj_type
+      - name: dest_obj
         expr_type: obj_type
       - name: robot
         expr_type: robot_entity_type
     precondition: null
     postcondition:
-      - robot_at(obj, robot)
+      - robot_at(dest_obj, robot)
     task_info:
       task: NavToObjTask-v0
       task_def: "nav_to_obj"
