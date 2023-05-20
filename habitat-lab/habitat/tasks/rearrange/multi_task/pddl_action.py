@@ -198,7 +198,11 @@ class PddlAction:
             post_conds = [p.clone().sub_in(found_assign) for p in post_conds]
 
         for p in post_conds:
-            p.set_state(sim_info)
+            if isinstance(p, Predicate):
+                p.set_state(sim_info)
+            elif isinstance(p, LogicalExpr):
+                for sub_p in p.sub_exprs:
+                    sub_p.set_state(sim_info)
 
     @property
     def params(self) -> List[PddlEntity]:
