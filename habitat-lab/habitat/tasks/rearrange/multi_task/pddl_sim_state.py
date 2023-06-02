@@ -324,6 +324,15 @@ class PddlSimState:
         Throws exception if the arguments are not compatible.
         """
 
+        # TODO: near predicates need to use a different threshold
+            # option 1: new pddl type distinct  from goal entity, so elif cascade behaves differently
+                # pro: easy coding. con: requires a new type and can't apply to existing goal entities
+            # option 2 (preferred): self._obj_states includes a third relationship parameter to  
+                # distinguish at from near, and other potential conflicts
+                # pro: maintains pddl types are reusability of target objects. Con: more coding
+                    # effort to add third variable into self._obj_states populated by predicate
+        
+        
         # Check object states.
         rom = sim_info.sim.get_rigid_object_manager()
         for entity, target in self._obj_states.items():
