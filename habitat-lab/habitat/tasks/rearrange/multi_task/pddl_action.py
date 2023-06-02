@@ -203,6 +203,13 @@ class PddlAction:
             elif isinstance(p, LogicalExpr):
                 for sub_p in p.sub_exprs:
                     sub_p.set_state(sim_info)
+        # for p in self._post_cond:
+        #     rearrange_logger.debug(f"Setting predicate {p}")
+        #     if isinstance(p, Predicate):
+        #         p.set_state(sim_info)
+        #     elif isinstance(p, LogicalExpr):
+        #         for sub_p in p.sub_exprs:
+        #             sub_p.set_state(sim_info)
 
     @property
     def params(self) -> List[PddlEntity]:

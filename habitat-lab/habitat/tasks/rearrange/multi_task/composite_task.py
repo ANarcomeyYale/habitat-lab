@@ -58,7 +58,7 @@ class CompositeTask(RearrangeTask):
         for i in range(node_idx):
             self.pddl_problem.apply_action(self.pddl_problem.solution[i])
 
-    def reset(self, episode: Episode):
+    def reset(self, episode: Episode, return_bound_pddl: bool):
         super().reset(episode, fetch_observations=False)
         self.pddl_problem.bind_to_instance(
             self._sim, cast(RearrangeDatasetV0, self._dataset), self, episode
@@ -68,4 +68,8 @@ class CompositeTask(RearrangeTask):
             self.jump_to_node(self._cur_node_idx, episode)
 
         self._sim.maybe_update_articulated_agent()
-        return self._get_observations(episode)
+        
+        if return_bound_pddl:
+            return self._get_observations(episode), self.pddl_problem
+        else:
+            return self._get_observations(episode)

@@ -70,6 +70,8 @@ from habitat_baselines.utils.info_dict import (
 )
 from habitat_baselines.utils.timing import Timing
 
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+
 
 @baseline_registry.register_trainer(name="ddppo")
 @baseline_registry.register_trainer(name="ppo")
@@ -810,9 +812,12 @@ class PPOTrainer(BaseRLTrainer):
         if self._agent.actor_critic.should_load_agent_state:
             self._agent.load_state_dict(ckpt_dict)
 
-        observations = self.envs.reset()
+        observations, bound_pddl_probs = zip(*self.envs.reset())
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
+        # TODO: Non-debugging mode crashes, due to reset() returning PddlProblem objects
+        #   export HABITAT_ENV_DEBUG=0
+        #   TypeError: can't pickle habitat_sim._ext.habitat_sim_bindings.SceneNode objects
 
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device="cpu"
@@ -881,6 +886,7 @@ class PPOTrainer(BaseRLTrainer):
             with inference_mode():
                 action_data = self._agent.actor_critic.act(
                     batch,
+                    bound_pddl_probs,
                     test_recurrent_hidden_states,
                     prev_actions,
                     not_done_masks,
@@ -926,6 +932,7 @@ class PPOTrainer(BaseRLTrainer):
             )
             for i in range(len(policy_infos)):
                 infos[i].update(policy_infos[i])
+            observations = [o[0] if (isinstance(o, tuple) and isinstance(o[1], PddlProblem)) else o for o in observations]
             batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,

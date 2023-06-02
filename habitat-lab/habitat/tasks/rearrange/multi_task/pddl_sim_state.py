@@ -264,6 +264,10 @@ class PddlSimState:
         """
         Returns if `entity` is inside of `target` in the CURRENT simulator state, NOT at the start of the episode.
         """
+        # TODO: properly handle the start state as if it was an actual target
+        if entity.name == "START" or target.name == "START":
+            return False
+        
         entity_pos = sim_info.get_entity_pos(entity)
         check_marker = cast(
             MarkerInfo,
@@ -276,6 +280,7 @@ class PddlSimState:
             global_bb = habitat_sim.geo.get_transformed_bb(
                 bb, check_marker.link_node.transformation
             )
+        # TODO: update to include start position as a target
 
         return global_bb.contains(entity_pos)
 
@@ -339,6 +344,9 @@ class PddlSimState:
             if not sim_info.check_type_matches(
                 entity, SimulatorObjectType.MOVABLE_ENTITY.value
             ):
+                # TODO: at and in predicates originally supported obj_type, but here
+                # it only supports moveable entitty. For now, both predicates only support
+                # moveable entity. If desired to support goal objects as the entity, change here
                 raise ValueError(f"Got unexpected entity {entity}")
             obj_idx = cast(int, sim_info.search_for_entity(entity))
             abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
@@ -356,12 +364,51 @@ class PddlSimState:
             ):
                 cur_pos = entity_obj.transformation.translation
 
-                targ_idx = cast(
-                    int,
-                    sim_info.search_for_entity(target),
-                )
-                idxs, pos_targs = sim_info.sim.get_targets()
-                targ_pos = pos_targs[list(idxs).index(targ_idx)]
+                # TODO: replace with sim_info.get_entity pos to centralize use of START?
+                if target.name == "START":
+                    # TODO: generalize to more than one agent
+                    targ_pos, _ = sim_info.env._get_cached_articulated_agent_start(agent_idx=0)
+                    #targ_pos = mn.Vector3(sim_info.episode.start_position)
+                    #targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
+                else:
+                    targ_idx = cast(
+                        int,
+                        sim_info.search_for_entity(target),
+                    )
+                    idxs, pos_targs = sim_info.sim.get_targets()
+                    targ_pos = pos_targs[list(idxs).index(targ_idx)]
+            # TODO: need to incorporate this typing generalization for online planner???
+            # elif sim_info.check_type_matches(target, OBJ_TYPE):
+            #     #if entity.name == "START":
+            #     #    cur_pos = self.episode.start_position
+            #     obj_idx = cast(
+            #         int, sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
+            #     )
+            #     # Previously: at predicate supports an entity of type obj_type, which includes goal_type
+            #         # either restrict what <at> supports or expand here
+            #         # answer: limit at predicate to rigid_obj_type, since it doesn't make sense to use goal_type anyway?
+            #             # counter: checking if the target is co-located with other static object uses goal_type
+            #             # counter counter: search for entity function looks within these restrictions, so
+            #                 # options are updating search for entity to support more general parent types or restrict predicates
+            #     # short term solution: restrict at predicate to rigid_obj_types
+            #     # long term solution: try entity search for all types within obj_type=(goal_type or rigid_obj_type)
+            #     # TODO: systematically document how each type is used in practice to define more precisely
+            #     abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
+            #     cur_pos = rom.get_object_by_id(
+            #         abs_obj_id
+            #     ).transformation.translation
+
+            #     if target.name == "START":
+            #         targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
+            #     else:
+            #         targ_idx = cast(
+            #             int, sim_info.search_for_entity(target, OBJ_TYPE)
+            #         )
+            #         # TODO: will a target of type rigid_obj_type or obj_type or static_obj_type fail here despite passing
+            #             # the <at> predicate requirement of static_obj_type and evaluating here?
+            #             # answer: rigid_obj_type fails, but cab or fridge types within static_obj_type are fine
+            #         idxs, pos_targs = sim_info.sim.get_targets()
+            #         targ_pos = pos_targs[list(idxs).index(targ_idx)]
 
                 dist = np.linalg.norm(cur_pos - targ_pos)
                 if dist >= sim_info.obj_thresh:
@@ -371,7 +418,31 @@ class PddlSimState:
             ):
                 recep = cast(mn.Range3D, sim_info.search_for_entity(target))
                 return recep.contains(entity_obj.translation)
+            elif sim_info.check_type_matches(
+                target, SimulatorObjectType.MOVABLE_ENTITY.value
+            ):
+                cur_pos = entity_obj.transformation.translation
+                
+                target_idx = cast(int, sim_info.search_for_entity(target))
+                abs_target_id = sim_info.sim.scene_obj_ids[target_idx]
+                target_obj = rom.get_object_by_id(abs_target_id)
+                targ_pos = target_obj.transformation.translation
+
+                dist = np.linalg.norm(cur_pos - targ_pos)
+                if dist >= sim_info.obj_thresh:
+                    return False
+
+                '''
+                targ_idx = cast(
+                        int,
+                        sim_info.search_for_entity(target),
+                    )
+                    idxs, pos_targs = sim_info.sim.get_targets()
+                    targ_pos = pos_targs[list(idxs).index(targ_idx)]
+                '''
+
             else:
+                import pdb; pdb.set_trace()
                 raise ValueError(
                     f"Got unexpected combination of {entity} and {target}"
                 )
@@ -416,12 +487,18 @@ class PddlSimState:
             elif sim_info.check_type_matches(
                 target, SimulatorObjectType.GOAL_ENTITY.value
             ):
-                targ_idx = cast(
-                    int,
-                    sim_info.search_for_entity(target),
-                )
-                all_targ_idxs, pos_targs = sim.get_targets()
-                targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
+                
+                if target.name == "START":
+                    # targ_pos = np.array(sim_info.episode.start_position, dtype=np.float32)
+                    # targ_pos = mn.Vector3(sim_info.episode.start_position)
+                    targ_pos, _ = sim_info.env._get_cached_articulated_agent_start(agent_idx=0)
+                else:
+                    targ_idx = cast(
+                        int,
+                        sim_info.search_for_entity(target),
+                    )
+                    all_targ_idxs, pos_targs = sim.get_targets()
+                    targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
                 set_T = mn.Matrix4.translation(targ_pos)
             elif sim_info.check_type_matches(
                 target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value

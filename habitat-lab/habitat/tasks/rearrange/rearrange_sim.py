@@ -302,12 +302,6 @@ class RearrangeSim(HabitatSim):
         if new_scene:
             self._load_navmesh(ep_info)
 
-        # save start position of each agent
-        self._agents_start_pos = {
-           agent_idx: self.agents_mgr[agent_idx].articulated_agent.base_transformation.translation
-           for agent_idx in range(len(self.agents_mgr))
-        }
-        
         # Get the starting positions of the target objects.
         scene_pos = self.get_scene_pos()
         self.target_start_pos = np.array(

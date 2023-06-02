@@ -130,9 +130,9 @@ class PddlSimInfo:
     marker_handles: Dict[str, MarkerInfo]
     robot_ids: Dict[str, int]
 
-    sim: RearrangeSim
+    sim: RearrangeSim #can't pickle
     dataset: RearrangeDatasetV0
-    env: RearrangeTask
+    env: RearrangeTask # can't pickle due to SceneNode
     episode: Episode
     obj_thresh: float
     art_thresh: float
