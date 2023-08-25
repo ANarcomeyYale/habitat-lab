@@ -264,6 +264,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         self,
         observations,
         bound_pddl_probs,
+        episodes_info,
         rnn_hidden_states,
         prev_actions,
         masks,
@@ -347,6 +348,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             ) = self._high_level_policy.get_next_skill(
                 observations,
                 bound_pddl_probs,
+                episodes_info,
                 rnn_hidden_states,
                 prev_actions,
                 masks,

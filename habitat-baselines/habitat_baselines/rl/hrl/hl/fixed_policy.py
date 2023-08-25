@@ -3,17 +3,20 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import List, Tuple
+import os
+import json
 
 import torch
 
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
-from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import save_pddl_problem, DOCKER_NAME
+from habitat.tasks.rearrange.multi_task.pddl_conversion_utils import save_pddl_problem, DOCKER_NAME, pddl_state_to_dict
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 
 import subprocess
 import time
 
+EXECUTE_FIXED_PLAN = True
 COMPARE_FIXED_PLAN = True
 MAX_HIGH_LEVEL_ACTIONS = 30
 
@@ -50,6 +53,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
 
         self.fixed_plan_actions = [[] for _ in range(self._num_envs)]
         self.online_plan_actions = [[] for _ in range(self._num_envs)]
+        self.trajectory = [[] for _ in range(self._num_envs)]
 
     def _parse_solution_actions(self, solution):
         solution_actions = []
@@ -132,6 +136,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
             if not_done == False:
                 self.fixed_plan_actions[i] = []
                 self.online_plan_actions[i] = []
+                self.trajectory[i] = []
 
     def _get_next_sol_idx(self, batch_idx, immediate_end):
         """
@@ -152,10 +157,22 @@ class FixedHighLevelPolicy(HighLevelPolicy):
         else:
             return self._next_sol_idxs[batch_idx].item()
 
+    def save_plan_actions(self, trajectory, episode_id, preference_id, filename):
+
+        steps_json = []
+        for cost, action, state in trajectory:
+            steps_json.append({'cost': cost, 'action':action, 'state':state})
+
+        # TODO: later on, integrate the trajectories for same episode diff prefs into the same dict
+        # do this as a post-processing step once the raw trajectories are encoded
+        traj_json = {episode_id: {preference_id: steps_json}}
+        json.dump(traj_json, open(filename, 'w'))
+    
     def get_next_skill(
         self,
         observations,
         bound_pddl_probs,
+        episodes_info,
         rnn_hidden_states,
         prev_actions,
         masks,
@@ -195,8 +212,24 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                     self._next_sol_idxs[batch_idx] += 1
                     self.fixed_plan_actions[batch_idx].append((skill_name, skill_args))
 
+                    cost = 1
+                    action = (skill_name, skill_args)
+                    state = pddl_state_to_dict(bound_pddl_probs[batch_idx], bound_pddl_probs[batch_idx]._sim_info)
+                    self.trajectory[batch_idx].append((cost, action, state))
+
+                    if immediate_end[batch_idx]:
+                        ep_info =  episodes_info[batch_idx]
+                        ep_id = f'ep{ep_info.episode_id}_scene{os.path.splitext(os.path.basename(ep_info.scene_id))[0]}'
+                        #ep_id = f'ep{ep_info.episode_id}
+                        pref_id = 'pref_id'
+                        filename = str(f"trajectories/{ep_id}_{pref_id}.json")
+                        self.save_plan_actions(self.trajectory[batch_idx], ep_id, pref_id, filename)
+
             fixed_plan = next_skill, skill_args_data, immediate_end, {}
             #return fixed_plan
+
+        if EXECUTE_FIXED_PLAN:
+            return fixed_plan
 
         next_skill = torch.zeros(self._num_envs)
         skill_args_data = [None for _ in range(self._num_envs)]
@@ -275,7 +308,21 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 skill_args_data[batch_idx] = skill_args  # type: ignore[call-overload]
 
                 self.online_plan_actions[batch_idx].append((skill_name, skill_args))
+                cost = 1
+                action = (skill_name, skill_args)
+                state = pddl_state_to_dict(bound_pddl_probs[batch_idx], bound_pddl_probs[batch_idx]._sim_info)
+                self.trajectory[batch_idx].append((cost, action, state))
+
+                if immediate_end[batch_idx]:
+                    ep_info =  episodes_info[batch_idx]
+                    ep_id = f'ep{ep_info.episode_id}_scene{os.path.splitext(os.path.basename(ep_info.scene_id))[0]}'
+                    #ep_id = f'ep{ep_info.episode_id}
+                    pref_id = 'pref_id'
+                    filename = str(f"trajectories/{ep_id}_{pref_id}.json")
+                    self.save_plan_actions(self.trajectory[batch_idx], ep_id, pref_id, filename)
 
         print("\n\nOnline plan so far = ", self.online_plan_actions)
         print("Fixed plan so far = ", self.fixed_plan_actions)
+
+        
         return next_skill, skill_args_data, immediate_end, {}

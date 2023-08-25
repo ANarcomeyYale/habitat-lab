@@ -887,6 +887,7 @@ class PPOTrainer(BaseRLTrainer):
                 action_data = self._agent.actor_critic.act(
                     batch,
                     bound_pddl_probs,
+                    current_episodes_info,
                     test_recurrent_hidden_states,
                     prev_actions,
                     not_done_masks,

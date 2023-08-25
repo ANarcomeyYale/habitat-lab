@@ -95,6 +95,9 @@ data
 /videos
 /train_dir
 /tb
+/trajectories
+/pddl_workingdir
+/video_dir
 
 # outputs from other libraries
 /sandbox

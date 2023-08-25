@@ -18,7 +18,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import PddlSimInfo
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 
 EPISODE_COST_NAME = 'episode-cost'
-DOCKER_NAME = 'pddl_manual_dev5'
+DOCKER_NAME = 'pddl_manual_dev'
 
 # TODO: better handling of consts passing through all these functions.
 def format_reqs(requirements):
@@ -226,6 +226,15 @@ def format_action_cost_value(action_costs):
 
 #def get_action_costs(action_name, pddl_problem):
 #    pass
+
+def pddl_state_to_dict(pddl_problem, current_state):
+    init_preds = get_current_predicates(pddl_problem, current_state)
+
+    # TODO: in non-debug mode, get around sim pickle issue by extracting these true predicates instead of entire PddlProblem object 
+
+    init_pddl = condition_to_dict(pddl_problem.init) + condition_to_dict(init_preds)
+
+    return init_pddl
 
 def save_pddl_problem(pddl_problem, problem_filename="pddl_workingdir/habitat_problem.pddl", current_state=None):
 
