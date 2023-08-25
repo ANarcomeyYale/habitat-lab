@@ -106,11 +106,14 @@ class PddlDomain:
         """
 
         for action_d in domain_def["actions"]:
-            parameters = [
-                PddlEntity(p["name"], self.expr_types[p["expr_type"]])
-                for p in action_d["parameters"]
-            ]
-            name_to_param = {p.name: p for p in parameters}
+            try:
+                parameters = [
+                    PddlEntity(p["name"], self.expr_types[p["expr_type"]])
+                    for p in action_d["parameters"]
+                ]
+                name_to_param = {p.name: p for p in parameters}
+            except:
+                import pdb; pdb.set_trace()
 
             pre_cond = self.parse_only_logical_expr(
                 action_d["precondition"], name_to_param

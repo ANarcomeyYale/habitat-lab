@@ -173,6 +173,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
         observations,
         bound_pddl_probs,
         episodes_info,
+        planner_config,
         rnn_hidden_states,
         prev_actions,
         masks,
@@ -221,7 +222,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                         ep_info =  episodes_info[batch_idx]
                         ep_id = f'ep{ep_info.episode_id}_scene{os.path.splitext(os.path.basename(ep_info.scene_id))[0]}'
                         #ep_id = f'ep{ep_info.episode_id}
-                        pref_id = 'pref_id'
+                        pref_id = planner_config.pref_id
                         filename = str(f"trajectories/{ep_id}_{pref_id}.json")
                         self.save_plan_actions(self.trajectory[batch_idx], ep_id, pref_id, filename)
 

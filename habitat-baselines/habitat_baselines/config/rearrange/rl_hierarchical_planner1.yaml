@@ -4,7 +4,7 @@
 # Supports different HL policy configurations and using a variety of LL policies.
 
 defaults:
-  - /benchmark/rearrange: set_table
+  - /benchmark/rearrange: set_table1
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
   - /habitat_baselines/rl/policy/obs_transforms:
@@ -14,7 +14,7 @@ defaults:
   - _self_
 
 planner:
-  pref_id: "pref2"
+  pref_id: "pref1"
 
 habitat_baselines:
   verbose: False

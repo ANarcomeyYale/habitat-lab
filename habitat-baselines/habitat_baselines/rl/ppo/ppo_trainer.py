@@ -888,6 +888,7 @@ class PPOTrainer(BaseRLTrainer):
                     batch,
                     bound_pddl_probs,
                     current_episodes_info,
+                    self.config.planner,
                     test_recurrent_hidden_states,
                     prev_actions,
                     not_done_masks,
