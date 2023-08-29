@@ -16,8 +16,8 @@ from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 import subprocess
 import time
 
-EXECUTE_FIXED_PLAN = True
-COMPARE_FIXED_PLAN = True
+EXECUTE_FIXED_PLAN = False
+COMPARE_FIXED_PLAN = False
 MAX_HIGH_LEVEL_ACTIONS = 30
 
 # TODO: migrate online plan to a new policy class instead of fixed policy
@@ -222,7 +222,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                         ep_info =  episodes_info[batch_idx]
                         ep_id = f'ep{ep_info.episode_id}_scene{os.path.splitext(os.path.basename(ep_info.scene_id))[0]}'
                         #ep_id = f'ep{ep_info.episode_id}
-                        pref_id = planner_config.pref_id
+                        #pref_id = planner_config.pref_id
                         filename = str(f"trajectories/{ep_id}_{pref_id}.json")
                         self.save_plan_actions(self.trajectory[batch_idx], ep_id, pref_id, filename)
 
@@ -245,15 +245,18 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 # @@@ Time between high level planner runs = 2.547 @@@
                 # highly variable depending on the action and how long it takes
 
-
+                preferences = json.load(open(planner_config.pref_filename, 'r'))
+                
+                #import pdb; pdb.set_trace()
                 save_pddl_problem(
                     bound_pddl_probs[batch_idx],
                     problem_filename=f"pddl_workingdir/habitat_problem_{batch_idx}.pddl", 
-                    current_state=bound_pddl_probs[batch_idx]._sim_info)
+                    current_state=bound_pddl_probs[batch_idx]._sim_info,
+                    preferences=preferences)
                 
                 # TODO: replace subprocess calls with Docker API calls for greater safety/security
-                command = f'docker cp pddl_workingdir/habitat_problem_{batch_idx}.pddl {DOCKER_NAME}:/root/workingdir'
-                subprocess.call(command, shell=True)
+                #command = f'docker cp pddl_workingdir/habitat_problem_{batch_idx}.pddl {DOCKER_NAME}:/root/workingdir'
+                #subprocess.call(command, shell=True)
                 problem_endtime = time.time()
                 print(f"\n\n@@@ Problem processing time (with current state) = {round(problem_endtime-problem_starttime,3)} @@@\n\n")
                 # @@@ Problem processing time (with current state) = 0.122 @@@
@@ -318,7 +321,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                     ep_info =  episodes_info[batch_idx]
                     ep_id = f'ep{ep_info.episode_id}_scene{os.path.splitext(os.path.basename(ep_info.scene_id))[0]}'
                     #ep_id = f'ep{ep_info.episode_id}
-                    pref_id = 'pref_id'
+                    pref_id = list(preferences.keys())[0]
                     filename = str(f"trajectories/{ep_id}_{pref_id}.json")
                     self.save_plan_actions(self.trajectory[batch_idx], ep_id, pref_id, filename)
 

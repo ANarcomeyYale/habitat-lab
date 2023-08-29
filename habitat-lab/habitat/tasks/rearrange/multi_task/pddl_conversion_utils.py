@@ -236,7 +236,7 @@ def pddl_state_to_dict(pddl_problem, current_state):
 
     return init_pddl
 
-def save_pddl_problem(pddl_problem, problem_filename="pddl_workingdir/habitat_problem.pddl", current_state=None):
+def save_pddl_problem(pddl_problem, problem_filename="pddl_workingdir/habitat_problem.pddl", current_state=None, preferences=None):
 
     objects = [{"name": obj.name, "type": obj.expr_type.name} for obj in pddl_problem._objects.values()]
     objects_pddl = defaultdict(list)
@@ -290,7 +290,7 @@ def save_pddl_problem(pddl_problem, problem_filename="pddl_workingdir/habitat_pr
                     "objects": objects_pddl,
                     "init": init_pddl,
                     "goal": goal_pddl,
-                    "action_costs": action_costs_pddl
+                    "action_costs": action_costs_pddl,
                     }
 
     with open(problem_filename, mode='w') as file:

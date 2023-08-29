@@ -14,7 +14,7 @@ defaults:
   - _self_
 
 planner:
-  pref_id: "pref2"
+  pref_filename: "/data/preference-learning/preferences/pref_0.json"
 
 habitat_baselines:
   verbose: False

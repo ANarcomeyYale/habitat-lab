@@ -45,15 +45,4 @@ stage_goals:
       - at(fruit_target|1,TARGET_fruit_target|1)
 
 solution:
-    - nav_to_receptacle_by_name(cab_push_point_5, robot_0)
     - open_cab_by_name(cab_push_point_5, robot_0)
-    - pick(bowl_target|0, robot_0)
-    - nav(TARGET_bowl_target|0, robot_0)
-    - place(bowl_target|0,TARGET_bowl_target|0, robot_0)
-
-    - nav_to_receptacle_by_name(fridge_push_point, robot_0)
-    - open_fridge_by_name(fridge_push_point, robot_0)
-    - nav(fruit_target|1, robot_0)
-    - pick(fruit_target|1, robot_0)
-    - nav(TARGET_fruit_target|1, robot_0)
-    - place(fruit_target|1,TARGET_fruit_target|1, robot_0)
